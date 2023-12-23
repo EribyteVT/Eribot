@@ -13,7 +13,7 @@ from math import pow,floor
 comments = [ "You go, girl!", "Are you fucking kidding me? HELL yeah!", "Great job!", "I love it!", "Amazing work!", "Well done!", "Impressive!", "Fantastic!", "You nailed it!", "Awesome!", "Brilliant!", "Keep it up!" ] 
 random_comment = random.choice(comments) 
 print(random_comment)
-guild_id = '1166059727722131577'
+guild_id = '1144711250673148024'
 LEVEL_CHANNEL = None
 # if(goingToCrash):
 #     self.dont
