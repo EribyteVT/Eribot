@@ -31,6 +31,7 @@ class Stream:
 intents = discord.Intents.all()
 client = discord.Client(intents = intents)
 tree = app_commands.CommandTree(client)
+urlBase = 'http://10.0.0.6:8080'
 
 DTOKEN = Secrets.DISCORD_TOKEN
 
@@ -53,7 +54,7 @@ async def schedule(interaction):
     if(len(currentTime)<13):
         currentTime = currentTime.ljust(13,'0')
 
-    url = 'http://10.0.0.6:8080/test/' + currentTime
+    url = urlBase + '/test/' + currentTime
 
     r = requests.get(url)
 
@@ -94,7 +95,7 @@ async def nextStream(interaction):
         currentTime = currentTime.ljust(13,'0')
 
     #url for getting streams
-    url = 'http://10.0.0.6:8080/test/' + currentTime
+    url = urlBase + '/test/' + currentTime
 
     #get streams
     r = requests.get(url)
@@ -199,7 +200,7 @@ def getLevelFromXp(xp):
 
 def getDataFromDiscordId(id):
     #ALSO ADDS USER BTW FUTURE ERIBYTE
-    url = 'http://127.0.0.1:8080/getbyId/discord/'+str(id)
+    url = urlBase + '/getbyId/discord/'+str(id)
 
     #get data
     data = requests.get(url)
@@ -227,7 +228,7 @@ def addXp(xp,id,update):
     data = {"id":id,"xp":xp,"updateTime":update,"newTime":currentTime}
 
     #data to send update to
-    url = "http://127.0.0.1:8080/update/discord"
+    url = urlBase + '/update/discord'
 
     #send request
     request = requests.post(url,json=data).json() 
