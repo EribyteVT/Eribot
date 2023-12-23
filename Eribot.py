@@ -263,7 +263,7 @@ def enoughTime(lastTime):
 async def on_ready():
     global LEVEL_CHANNEL
     await client.change_presence(status=discord.Status.online)
-    # await tree.sync(guild=discord.Object(id=guild_id))
+    await tree.sync(guild=discord.Object(id=guild_id))
     LEVEL_CHANNEL = await client.fetch_channel('1188018666957189122')
 
     if on_ready :
