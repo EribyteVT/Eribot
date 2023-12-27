@@ -233,37 +233,12 @@ async def on_message(message):
     id = message.author.id 
 
     #get data from id
-    data = crudService.getAssociatedFromDiscord(id)
+    data = crudService.getDataFromTwitchdId(id)
 
-    print(data)
-
-    #not in db at all
-    if(data == None or data == [] or data[0] == None):
-        data = [crudService.getDataFromDiscordId(id)]
-
-    print(data)
-
-    discord = None
-
-    total_xp = 0
-
-    for account in data:
-        if(account['serviceName'] == 'discord'):
-            discord = account
-        total_xp += account['xp']    
-
-    levelBefore = crudService.getLevelFromXp(total_xp)
-    
     #if new account or time between messages is enuf, add xp
-    if(discord['lastMessageXp']==None or crudService.enoughTime(discord['lastMessageXp'])):
+    if(data['lastMessageXp']==None or crudService.enoughTime(data['lastMessageXp'])):
         amount = random.randint(1,5)
-        data = crudService.addXpbyDiscordId(amount,id,True)
-        total_xp += amount
-
-    levelAfter = crudService.getLevelFromXp(total_xp)
-        
-    if(levelAfter > levelBefore):
-        await LEVEL_CHANNEL.send(f"Congrats <@{id}> for reaching level {levelAfter}!!!")
+        await add_xp_handler(id,amount,True)
 
 @tree.command(name = "connect-twitch",description="connect your twitch and discord account for more XP!", guild=discord.Object(id=guild_id))
 async def connectTwitch(interaction: discord.Interaction, username:str):
@@ -318,6 +293,28 @@ async def connectTwitch(interaction: discord.Interaction, username:str):
 #     await interaction.response.send_message("# this you? ',:^)",embed=embed, ephemeral=True,view=buttonMenu)
 
 
+async def add_xp_handler(id,xp_to_add, update):
+    data = crudService.getAssociatedFromDiscord(id)
+
+    #not in db at all
+    if(data == None or data == [] or data[0] == None):
+        data = [crudService.getDataFromDiscordId(id)]
+
+    total_xp = 0
+
+    for account in data:
+        total_xp += account['xp']    
+
+    levelBefore = crudService.getLevelFromXp(total_xp)
+
+    #if new account or time between messages is enuf, add xp
+    data = crudService.addXpbyDiscordId(xp_to_add,id,update)
+    total_xp += xp_to_add
+
+    levelAfter = crudService.getLevelFromXp(total_xp)
+        
+    if(levelAfter > levelBefore):
+       await LEVEL_CHANNEL.send(f"Congrats <@{id}> for reaching level {levelAfter}!!!")
 
 
 @client.event
