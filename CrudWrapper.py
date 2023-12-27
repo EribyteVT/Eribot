@@ -80,13 +80,10 @@ class CrudWrapper:
                xp += self.getDataFromDiscordId(account['serviceId'])['xp']
                did_discord = True 
 
-            match(account['serviceName']):
-                case "twitch":
-                    xp += self.getDataFromTwitchdId(account['serviceId'])['xp']
-                case "youtube":
-                    xp += self.getDataFromYoutubeId(account['serviceId'])['xp']
-                case _:
-                    raise Exception("SHIT'S FUCKED, NOT IMPLEMENTED YET")
+            if account['serviceName'] == "twitch":
+                xp += self.getDataFromTwitchdId(account['serviceId'])['xp']
+            elif account['serviceName'] == "youtube":
+                xp += self.getDataFromYoutubeId(account['serviceId'])['xp']
             
         return xp
 
@@ -95,14 +92,11 @@ class CrudWrapper:
         data_list = []
         
         for account in accounts:
-            match(account['serviceName']):
-                case "twitch":
-                    account_xp = self.getDataFromTwitchdId(account['serviceId'])
-                case "youtube":
-                    account_xp = self.getDataFromYoutubeId(account['serviceId'])
-                case _:
-                    raise Exception("SHIT'S FUCKED, NOT IMPLEMENTED YET")
-            
+            if account['serviceName'] == "twitch":
+                account_xp = self.getDataFromTwitchdId(account['serviceId'])
+            elif account['serviceName'] == "youtube":
+                account_xp = self.getDataFromYoutubeId(account['serviceId'])
+                
             data_list.append(account_xp)
         
         return data_list
