@@ -220,9 +220,11 @@ class CrudWrapper:
         #get data
         data = requests.get(url)
 
+        print(data)
+
         #if none, add user
         if(data.text is None or data.text ==""):
-            data = [self.addXpbyDiscordId(0,id,False)]
+            data = [self.getDataFromDiscordId(id)]
         else:
             data = data.json()
 

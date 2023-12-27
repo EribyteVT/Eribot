@@ -12,8 +12,9 @@ from math import floor
 from twitchAPI.helper import first
 from twitchAPI.twitch import Twitch
 from pyyoutube import Client
-
 from CrudWrapper import parse_timestamp, CrudWrapper
+
+
 
 class ConfirmationMenu(discord.ui.View):
     def __init__(self,discord_id,twitch_id):
@@ -233,7 +234,7 @@ async def on_message(message):
     id = message.author.id 
 
     #get data from id
-    data = crudService.getDataFromTwitchdId(id)
+    data = crudService.getDataFromDiscordId(id)
 
     #if new account or time between messages is enuf, add xp
     if(data['lastMessageXp']==None or crudService.enoughTime(data['lastMessageXp'])):
@@ -303,7 +304,7 @@ async def add_xp_handler(id,xp_to_add, update):
     total_xp = 0
 
     for account in data:
-        total_xp += account['xp']    
+        total_xp += account['xp']
 
     levelBefore = crudService.getLevelFromXp(total_xp)
 
