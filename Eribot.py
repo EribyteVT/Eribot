@@ -324,7 +324,7 @@ async def connectTwitch(interaction: discord.Interaction, username:str):
 async def on_ready():
     global LEVEL_CHANNEL, twitch
     await client.change_presence(status=discord.Status.online)
-    # await tree.sync(guild=discord.Object(id=guild_id))
+    await tree.sync(guild=discord.Object(id=guild_id))
 
     if env == "PROD":
         LEVEL_CHANNEL = await client.fetch_channel('1188018666957189122')
@@ -334,12 +334,6 @@ async def on_ready():
 
     twitch = await Twitch(Secrets.APP_ID, Secrets.APP_SECRET)
     youtube = Client(api_key=Secrets.YOUTUBE_API_KEY)
-
-    # result = youtube.channels.list("id","eribytevt")
-    # print(result.keys())
-
-    # helper = UserAuthenticationStorageHelper(twitch, [])
-    # await helper.bind()
 
     if on_ready :
         # called_once_a_day.start()
