@@ -56,7 +56,7 @@ client = discord.Client(intents = intents)
 tree = app_commands.CommandTree(client)
 
 
-env = "LOCAL"
+env = "PROD"
 
 crudService = CrudWrapper(env)
 
@@ -206,14 +206,10 @@ async def getLevel(interaction: discord.Interaction):
 
     for account in accounts_xp:
         total_xp += account['xp']
-
-        match(account['serviceName']):
-            case "twitch":
-                twitch_xp = account['xp']
-            case "youtube":
-                youtube_xp = account['xp']
-            case _:
-                raise Exception("SHIT'S FUCKED, NOT IMPLEMENTED YET")
+        if account['serviceName'] == "twitch":
+            twitch_xp = account['xp']
+        elif account['serviceName'] == "youtube":
+            youtube_xp = account['xp']
     
     #get das levelin
     level = crudService.getLevelFromXp(total_xp)
