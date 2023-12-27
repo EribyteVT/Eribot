@@ -59,6 +59,38 @@ class CrudWrapper:
             json = data.json()
             return json
         
+    def getConnectedAccountsTwitch(self,id):
+        url = self.urlBase + '/getTwitchConnections/{twitchId}/'+str(id)
+        data = requests.get(url)
+
+        #return new discord account
+        if(data.text is None or data.text ==""):
+            return None
+        else:
+            json = data.json()
+            return json
+    
+    def getUserTotalXP(self,accounts):
+        xp = 0
+
+        did_discord = False
+        
+        for account in accounts:
+            if(not did_discord):
+               xp += self.getDataFromDiscordId(account['serviceId'])['xp']
+               did_discord = True 
+
+            match(account['serviceName']):
+                case "twitch":
+                    xp += self.getDataFromTwitchdId(account['serviceId'])['xp']
+                case "youtube":
+                    xp += self.getDataFromYoutubeId(account['serviceId'])['xp']
+                case _:
+                    raise Exception("SHIT'S FUCKED, NOT IMPLEMENTED YET")
+            
+        return xp
+
+        
     def getXpFromAccounts(self,accounts):
         data_list = []
         
@@ -169,6 +201,40 @@ class CrudWrapper:
         else:
             return data.json()
 
+
+    ######################### GET ASSOCIATED #######################################################
+        
+    def getAssociatedFromTwitch(self,id):
+        url = self.urlBase + '/GetAllAccountsAssociated/twitch/'+str(id)
+
+        #get data
+        data = requests.get(url)
+
+        #if none, add user
+        if(data.text is None or data.text ==""):
+            data = [self.addXpbyTwitchId(0,id,False)]
+        else:
+            data = data.json()
+
+
+        #return the data
+        return data
+    
+    def getAssociatedFromDiscord(self,id):
+        url = self.urlBase + '/GetAllAccountsAssociated/discord/'+str(id)
+
+        #get data
+        data = requests.get(url)
+
+        #if none, add user
+        if(data.text is None or data.text ==""):
+            data = [self.addXpbyDiscordId(0,id,False)]
+        else:
+            data = data.json()
+
+
+        #return the data
+        return data
 
 
     ################ ADD XP #######################################################

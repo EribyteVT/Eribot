@@ -237,15 +237,34 @@ async def on_message(message):
     id = message.author.id 
 
     #get data from id
-    data = crudService.getDataFromDiscordId(id)
+    data = crudService.getAssociatedFromDiscord(id)
 
-    levelBefore = crudService.getLevelFromXp(data['xp'])
+    print(data)
+
+    #not in db at all
+    if(data == None or data == [] or data[0] == None):
+        data = [crudService.getDataFromDiscordId(id)]
+
+    print(data)
+
+    discord = None
+
+    total_xp = 0
+
+    for account in data:
+        if(account['serviceName'] == 'discord'):
+            discord = account
+        total_xp += account['xp']    
+
+    levelBefore = crudService.getLevelFromXp(total_xp)
     
     #if new account or time between messages is enuf, add xp
-    if(data['lastMessageXp']==None or crudService.enoughTime(data['lastMessageXp'])):
-        data = crudService.addXpbyDiscordId(random.randint(1,5),id,True)
+    if(discord['lastMessageXp']==None or crudService.enoughTime(discord['lastMessageXp'])):
+        amount = random.randint(1,5)
+        data = crudService.addXpbyDiscordId(amount,id,True)
+        total_xp += amount
 
-    levelAfter = crudService.getLevelFromXp(data['xp'])
+    levelAfter = crudService.getLevelFromXp(total_xp)
         
     if(levelAfter > levelBefore):
         await LEVEL_CHANNEL.send(f"Congrats <@{id}> for reaching level {levelAfter}!!!")
