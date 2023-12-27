@@ -8,15 +8,85 @@ import datetime
 import re
 import random 
 import pytz
-from math import pow,floor
+from math import floor
+from twitchAPI.helper import first
+from twitchAPI.twitch import Twitch
+from pyyoutube import Client
+
+from CrudWrapper import parse_timestamp, CrudWrapper
+
+class ConfirmationMenu(discord.ui.View):
+    def __init__(self,discord_id,twitch_id):
+        super().__init__()
+        self.value = None
+        self.discord_id = discord_id
+        self.twitch_id = twitch_id
+
+    # When the button is pressed, set the inner value to `True` and
+    # stop the View from listening to more input.
+    # We also send the user an ephemeral message that we're confirming their choice.
+    @discord.ui.button(label='Yes', style=discord.ButtonStyle.green)
+    async def confirm(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.edit_message(content='Connecting...',embed=None,view=None,delete_after=1)
+        twitchUser = crudService.getDataFromTwitchdId(self.twitch_id)
+
+        response = crudService.addTwitchToDiscord(self.discord_id,self.twitch_id)
+
+        if(response.text == None or response.text == ""):
+            await interaction.followup.send("ERROR ON BACKEND, SCHRODINGERS ACCOUNT EXISTS AND DOESNT",ephemeral=True)
+            return
+        
+        await interaction.followup.send("Connected!!!!!",ephemeral=True)
+        self.stop()
+
+    # This one is similar to the confirmation button except sets the inner value to `False`
+    @discord.ui.button(label='No', style=discord.ButtonStyle.grey)
+    async def cancel(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.edit_message(content='Very well, you can try again :3',embed=None,view=None)
+        self.value = False
+        self.stop()
+        
 
 comments = [ "You go, girl!", "Are you fucking kidding me? HELL yeah!", "Great job!", "I love it!", "Amazing work!", "Well done!", "Impressive!", "Fantastic!", "You nailed it!", "Awesome!", "Brilliant!", "Keep it up!" ] 
 random_comment = random.choice(comments) 
 print(random_comment)
-guild_id = '1144711250673148024'
+
+intents = discord.Intents.all()
+client = discord.Client(intents = intents)
+tree = app_commands.CommandTree(client)
+
+
+env = "LOCAL"
+
+crudService = CrudWrapper(env)
+
+if(env == "PROD"):
+    #THE MAIN ERIBYTE SERVER
+    guild_id = '1144711250673148024'
+    urlBase = 'http://10.0.0.6:8080'
+    DTOKEN = Secrets.DISCORD_TOKEN
+
+elif(env == "LOCAL"):
+    #ERIBYTE TEST SITE ALPHA
+    guild_id = '1166059727722131577'
+    urlBase = 'http://127.0.0.1:8080'
+    DTOKEN = Secrets.DISCORD_BETA_TOKEN
+    
+elif(env == "DEV"):
+    #ERIBYTE TEST SITE ALPHA
+    guild_id = '1166059727722131577'
+    #can't be used locally
+    urlBase = 'https://crud.eribyte.net'
+    DTOKEN = Secrets.DISCORD_BETA_TOKEN
+
+else:
+    raise Exception("ERROR, ENV NOT SET")
+
+#we use there later globally, which isn't the best practice but fuck it
 LEVEL_CHANNEL = None
-# if(goingToCrash):
-#     self.dont
+twitch = None 
+youtube = None
+
 
 class Stream:
     def __init__(self, unixts, name):
@@ -28,26 +98,14 @@ class Stream:
         return self.name +', '+ str(self.unixts)
 
 
-intents = discord.Intents.all()
-client = discord.Client(intents = intents)
-tree = app_commands.CommandTree(client)
-urlBase = 'http://10.0.0.6:8080'
-
-DTOKEN = Secrets.DISCORD_TOKEN
-
 @tree.command(name = "compliment", description="says something nice about you",  guild=discord.Object(id=guild_id))
-async def compliment(interaction):
+async def compliment(interaction: discord.Interaction):
     comments = [ "You go, girl!", "Are you fucking kidding me? HELL yeah!", "Great job!", "I love it!", "Amazing work!", "Well done!", "Impressive!", "Fantastic!", "You nailed it!", "Awesome!", "Brilliant!", "Keep it up!" ] 
     random_comment = random.choice(comments) 
     await interaction.response.send_message(random_comment)
-    
-
-
-def parse_timestamp(timestamp):
-    return datetime.datetime(*[int(x) for x in re.findall(r'\d+', timestamp)],tzinfo=pytz.utc)
 
 @tree.command(name = "schedule",description="get the schedule for the next week", guild=discord.Object(id=guild_id))
-async def schedule(interaction):
+async def schedule(interaction: discord.Interaction):
     currentTime = str(time.time())[:-4]
     currentTime = ''.join(currentTime.split('.'))
 
@@ -86,7 +144,7 @@ async def schedule(interaction):
     pass
 
 @tree.command(name = "next-stream",description="get the next stream", guild=discord.Object(id=guild_id))
-async def nextStream(interaction):
+async def nextStream(interaction: discord.Interaction):
     #get current time in proper format
     currentTime = str(time.time())[:-4]
     currentTime = ''.join(currentTime.split('.'))
@@ -128,21 +186,46 @@ async def nextStream(interaction):
     await interaction.response.send_message(msg_to_send)
 
 @tree.command(name = "get-level",description="get your current level!", guild=discord.Object(id=guild_id))
-async def getLevel(interaction):
+async def getLevel(interaction: discord.Interaction):
     #get id from user
     id = interaction.user.id
 
     #retrieve data from db
-    data = getDataFromDiscordId(id)
+    data = crudService.getConnectedAccounts(id)
+
+    accounts_xp = crudService.getXpFromAccounts(data)
+
+    discrd_xp = crudService.getDataFromDiscordId(id)
+
+    total_xp = discrd_xp['xp']
+
+    #Shit way to do this, fix later, MVP Eribyte, MVP
+    youtube_xp = "Not Connected"
+
+    twitch_xp = "Not Connected (/connect-twitch to connect!)"
+
+    for account in accounts_xp:
+        total_xp += account['xp']
+
+        match(account['serviceName']):
+            case "twitch":
+                twitch_xp = account['xp']
+            case "youtube":
+                youtube_xp = account['xp']
+            case _:
+                raise Exception("SHIT'S FUCKED, NOT IMPLEMENTED YET")
     
     #get das levelin
-    level = getLevelFromXp(data['xp'])
+    level = crudService.getLevelFromXp(total_xp)
+
 
     #format message
-    message = f"# LEVEL: {level}\n# XP: {data['xp']}"
+    message = f"# LEVEL: {level}\n# TOTAL XP: {total_xp}\n\n## discord: {discrd_xp['xp']}\n## twitch: {twitch_xp}\n"
     
     #send
     await interaction.response.send_message(message)
+    
+
 
 @client.event
 async def on_message(message):
@@ -154,117 +237,94 @@ async def on_message(message):
     id = message.author.id 
 
     #get data from id
-    data = getDataFromDiscordId(id)
+    data = crudService.getDataFromDiscordId(id)
 
-    levelBefore = getLevelFromXp(data['xp'])
+    levelBefore = crudService.getLevelFromXp(data['xp'])
     
     #if new account or time between messages is enuf, add xp
-    if(data['lastMessageXp']==None or enoughTime(data['lastMessageXp'])):
-        data = addXp(random.randint(1,5),id,True)
+    if(data['lastMessageXp']==None or crudService.enoughTime(data['lastMessageXp'])):
+        data = crudService.addXpbyDiscordId(random.randint(1,5),id,True)
 
-    levelAfter = getLevelFromXp(data['xp'])
+    levelAfter = crudService.getLevelFromXp(data['xp'])
         
     if(levelAfter > levelBefore):
         await LEVEL_CHANNEL.send(f"Congrats <@{id}> for reaching level {levelAfter}!!!")
 
+@tree.command(name = "connect-twitch",description="connect your twitch and discord account for more XP!", guild=discord.Object(id=guild_id))
+async def connectTwitch(interaction: discord.Interaction, username:str):
 
+    id = interaction.user.id
+
+    #check if twitch is connected
+    if(crudService.twitchConnected(id)):
+        await interaction.response.send_message("I'm sorry but you already have a twitch account connected [IF WANT DELETE TELL ERIBYTE]", ephemeral=True)
+        return
     
+    user = twitch.get_users(logins=username)
+    result = await first(user)
+
+    if(result is None):
+        await interaction.response.send_message("ERROR: twitch user not found", ephemeral=True)
+        return
+
+    embed = discord.Embed(title=result.login,description=f"date created: {result.created_at}")
+    embed.set_image(url=result.profile_image_url)
+
+    buttonMenu = ConfirmationMenu(id, result.id)
+
+    await interaction.response.send_message("# this you? ',:^)",embed=embed, ephemeral=True,view=buttonMenu)
+
+
+# I HATE THE YOUTUBE API
+# @tree.command(name = "connect-youtube",description="connect your youtube and discord account for more XP!", guild=discord.Object(id=guild_id))
+# async def connectYoutube(interaction: discord.Interaction, username:str):
+
+#     id = interaction.user.id
+
+#     #check if twitch is connected
+#     if(youtubeConnected(id)):
+#         await interaction.response.send_message("I'm sorry but you already have a twitch account connected [IF WANT DELETE TELL ERIBYTE]", ephemeral=True)
+#         return
     
-def getLevelFromXp(xp):
-    """
-    THE 2 FUNCTIONS FOR XP:
-    0-50: 0.04x^3 + 0.8x^2 + 2x
-    50+: 400(x-32.25)
-    """
-    #we have 2 different functions for xp, rollover xp is second function
-    rollover_xp=0
-
-    #split into 2 diff xp graphs
-    if(xp>7100):
-        rollover_xp = xp-7100
-        xp=7100
+#     # user = youtube.
     
-    highestLevel = 0
+#     user = twitch.get_users(logins=username)
+#     result = await first(user)
 
-    for i in range(51):
-        xp_for_i = .04 * (i**3) + .8 * (i**2) + 2*i
-        if xp >= xp_for_i:
-            highestLevel = i
+#     if(result is None):
+#         await interaction.response.send_message("ERROR: twitch user not found", ephemeral=True)
+#         return
 
-    level = highestLevel
+#     embed = discord.Embed(title=result.login,description=f"date created: {result.created_at}")
+#     embed.set_image(url=result.profile_image_url)
 
-    #always rollover, it's either 0 or something
-    level += floor((rollover_xp)//400)
+#     buttonMenu = ConfirmationMenu(id, result.id)
 
-    return level
+#     await interaction.response.send_message("# this you? ',:^)",embed=embed, ephemeral=True,view=buttonMenu)
 
-def getDataFromDiscordId(id):
-    #ALSO ADDS USER BTW FUTURE ERIBYTE
-    url = urlBase + '/getbyId/discord/'+str(id)
-
-    #get data
-    data = requests.get(url)
-
-    #if none, add user
-    if(data.text is None or data.text ==""):
-        data = addXp(0,id,False)
-    else:
-        data = data.json()
-
-
-    #return the data
-    return data
-
-
-def addXp(xp,id,update):
-    #get current time in okay enough format
-    currentTime = str(time.time())[:-4]
-    currentTime = ''.join(currentTime.split('.'))
-
-    if(len(currentTime)==12):
-        currentTime+='0'
-    
-    #data for update
-    data = {"id":id,"xp":xp,"updateTime":update,"newTime":currentTime}
-
-    #data to send update to
-    url = urlBase + '/update/discord'
-
-    #send request
-    request = requests.post(url,json=data).json() 
-
-    return request
-
-
-
-def enoughTime(lastTime):
-    #get current time
-    currentTime = str(time.time())[:-4]
-    currentTime = ''.join(currentTime.split('.'))
-
-    if(len(currentTime)<13):
-        currentTime = currentTime.ljust(13,'0')
-    
-    #how we tell if enough time has passed (a random 7-17 mins)
-    bodgeTime = (12 + random.randint(-5,5))*60000 
-
-    #real complicated logic to convert dates (man I fuckin hate dates)
-    lastTime = datetime.datetime.timestamp(parse_timestamp(lastTime[:-5]))*1000
-
-    #if it's been 7-17 minutes past the last update, update
-    if(int(currentTime) > int(lastTime)+bodgeTime):
-        return True 
-    
-    return False
 
 
 
 @client.event
 async def on_ready():
-    global LEVEL_CHANNEL
+    global LEVEL_CHANNEL, twitch
     await client.change_presence(status=discord.Status.online)
-    await tree.sync(guild=discord.Object(id=guild_id))
-    LEVEL_CHANNEL = await client.fetch_channel('1188018666957189122')
+    # await tree.sync(guild=discord.Object(id=guild_id))
+
+    if env == "PROD":
+        LEVEL_CHANNEL = await client.fetch_channel('1188018666957189122')
+
+    elif env == "DEV" or env == "LOCAL":
+        LEVEL_CHANNEL = await client.fetch_channel('1188014511446302803')
+
+    twitch = await Twitch(Secrets.APP_ID, Secrets.APP_SECRET)
+    youtube = Client(api_key=Secrets.YOUTUBE_API_KEY)
+
+    # result = youtube.channels.list("id","eribytevt")
+    # print(result.keys())
+
+    # helper = UserAuthenticationStorageHelper(twitch, [])
+    # await helper.bind()
 
     if on_ready :
         # called_once_a_day.start()
