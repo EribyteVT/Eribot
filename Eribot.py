@@ -14,8 +14,6 @@ from twitchAPI.twitch import Twitch
 from pyyoutube import Client
 from CrudWrapper import parse_timestamp, CrudWrapper
 
-
-
 class ConfirmationMenu(discord.ui.View):
     def __init__(self,discord_id,twitch_id):
         super().__init__()
@@ -77,7 +75,7 @@ elif(env == "DEV"):
     #ERIBYTE TEST SITE ALPHA
     guild_id = '1166059727722131577'
     #can't be used locally
-    urlBase = 'https://crud.eribyte.net'
+    urlBase = 'http://10.0.0.6:8080'
     DTOKEN = Secrets.DISCORD_BETA_TOKEN
 
 else:
@@ -221,8 +219,6 @@ async def getLevel(interaction: discord.Interaction):
     
     #send
     await interaction.response.send_message(message)
-    
-
 
 @client.event
 async def on_message(message):
@@ -239,7 +235,7 @@ async def on_message(message):
     #if new account or time between messages is enuf, add xp
     if(data['lastMessageXp']==None or crudService.enoughTime(data['lastMessageXp'])):
         amount = random.randint(1,5)
-        await add_xp_handler(id,amount,True)
+        await add_xp_handler(id,amount,True,message.author)
 
 @tree.command(name = "connect-twitch",description="connect your twitch and discord account for more XP!", guild=discord.Object(id=guild_id))
 async def connectTwitch(interaction: discord.Interaction, username:str):
@@ -266,35 +262,7 @@ async def connectTwitch(interaction: discord.Interaction, username:str):
     await interaction.response.send_message("# this you? ',:^)",embed=embed, ephemeral=True,view=buttonMenu)
 
 
-# I HATE THE YOUTUBE API
-# @tree.command(name = "connect-youtube",description="connect your youtube and discord account for more XP!", guild=discord.Object(id=guild_id))
-# async def connectYoutube(interaction: discord.Interaction, username:str):
-
-#     id = interaction.user.id
-
-#     #check if twitch is connected
-#     if(youtubeConnected(id)):
-#         await interaction.response.send_message("I'm sorry but you already have a twitch account connected [IF WANT DELETE TELL ERIBYTE]", ephemeral=True)
-#         return
-    
-#     # user = youtube.
-    
-#     user = twitch.get_users(logins=username)
-#     result = await first(user)
-
-#     if(result is None):
-#         await interaction.response.send_message("ERROR: twitch user not found", ephemeral=True)
-#         return
-
-#     embed = discord.Embed(title=result.login,description=f"date created: {result.created_at}")
-#     embed.set_image(url=result.profile_image_url)
-
-#     buttonMenu = ConfirmationMenu(id, result.id)
-
-#     await interaction.response.send_message("# this you? ',:^)",embed=embed, ephemeral=True,view=buttonMenu)
-
-
-async def add_xp_handler(id,xp_to_add, update):
+async def add_xp_handler(id,xp_to_add, update, member):
     data = crudService.getAssociatedFromDiscord(id)
 
     #not in db at all
@@ -313,9 +281,20 @@ async def add_xp_handler(id,xp_to_add, update):
     total_xp += xp_to_add
 
     levelAfter = crudService.getLevelFromXp(total_xp)
+
         
     if(levelAfter > levelBefore):
-       await LEVEL_CHANNEL.send(f"Congrats <@{id}> for reaching level {levelAfter}!!!")
+        level_role = '1187978756829225051'
+
+        can_ping = False
+        for role in member.roles:
+            if int(role.id) == int(level_role):
+                can_ping = True
+
+        if(can_ping):
+            await LEVEL_CHANNEL.send(f"Congrats <@{id}> for reaching level {levelAfter}!!!")
+        else:
+            await LEVEL_CHANNEL.send(f"Congrats {member.display_name} for reaching level {levelAfter}!!!")
 
 
 @client.event
@@ -331,7 +310,7 @@ async def on_ready():
         LEVEL_CHANNEL = await client.fetch_channel('1188014511446302803')
 
     twitch = await Twitch(Secrets.APP_ID, Secrets.APP_SECRET)
-    youtube = Client(api_key=Secrets.YOUTUBE_API_KEY)
+    # youtube = Client(api_key=Secrets.YOUTUBE_API_KEY)
 
     if on_ready :
         # called_once_a_day.start()
