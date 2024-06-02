@@ -304,7 +304,7 @@ async def addEvents(interaction: discord.Interaction):
 
         for stream in streamList:
             await interaction.guild.create_scheduled_event(name = stream.name, 
-                                                           description="TO BE IMPLEMENTED", 
+                                                           description="Watch me live on twitch! :D", 
                                                            start_time=stream.unixts, 
                                                            end_time=stream.unixts + datetime.timedelta(hours=2),
                                                            location="https://twitch.tv/eribytevt",
