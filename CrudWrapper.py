@@ -312,5 +312,13 @@ class CrudWrapper:
         
         return False
     
+    def addStream(self, timestamp, streamName, description):
+        data = {"timestamp":timestamp, "streamName": streamName,"description":description}
+        url = self.urlBase + '/AddStream'
+        request = requests.post(url,json=data).text
+        
+        return request
+
+    
 def parse_timestamp(timestamp):
     return datetime.datetime(*[int(x) for x in re.findall(r'\d+', timestamp)],tzinfo=pytz.utc)
