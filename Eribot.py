@@ -238,7 +238,7 @@ async def connectTwitch(interaction: discord.Interaction, username:str):
     await interaction.response.send_message("# this you? ',:^)",embed=embed, ephemeral=True,view=buttonMenu)
 
 @tree.command(name = "add-stream", description="Add a stream to the database")
-async def addStream(interaction: discord.Interaction, timestamp: str, stream_name: str, description: str):
+async def addStream(interaction: discord.Interaction, timestamp: str, stream_name: str):
     if isAdmin(interaction.user):
         guild = str(interaction.guild_id)
 
