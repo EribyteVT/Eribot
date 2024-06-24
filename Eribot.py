@@ -15,6 +15,22 @@ from pyyoutube import Client
 from CrudWrapper import parse_timestamp, CrudWrapper
 from PIL import Image, ImageDraw, ImageFont
 import os
+import Eribot_Views_Modals
+
+class Streamer:
+    def __init__(self,streamer_id,streamer_name,timezone,guild,level_system,level_ping_role,level_channel):
+        self.streamer_id = str(streamer_id)
+        self.streamer_name = str(streamer_name)
+        self.timezone = str(timezone)
+        self.guild = str(guild)
+        self.level_system = str(level_system)
+        self.level_ping_role = str(level_ping_role)
+        self.level_channel_id = str(level_channel)
+        self.level_channel = None
+
+    def setLevelChannel(self,level_channel):
+        self.level_channel = level_channel
+    
 
 class ConfirmationMenu(discord.ui.View):
     def __init__(self,discord_id,twitch_id):
@@ -47,6 +63,15 @@ class ConfirmationMenu(discord.ui.View):
         self.value = False
         self.stop()
         
+class Stream:
+    def __init__(self, unixts, name):
+        self.unixts = unixts
+        self.name = name
+    def __lt__(self, other):
+        return self.unixts < other.unixts
+    def __str__(self):
+        return self.name +', '+ str(self.unixts)
+
 
 comments = [ "You go, girl!", "Are you fucking kidding me? HELL yeah!", "Great job!", "I love it!", "Amazing work!", "Well done!", "Impressive!", "Fantastic!", "You nailed it!", "Awesome!", "Brilliant!", "Keep it up!" ] 
 random_comment = random.choice(comments) 
@@ -55,28 +80,26 @@ print(random_comment)
 intents = discord.Intents.all()
 client = discord.Client(intents = intents)
 tree = app_commands.CommandTree(client)
-allowed_stream_list = [1168191759298334790,1143683991728304128]
-
 
 env = "LOCAL"
 
-crudService = CrudWrapper(env)
+crudService = CrudWrapper(env,Secrets.CRUD_PASSWORD)
+
+
+# guild id to streamer obj
+guild_id_lookup = {}
 
 if(env == "PROD"):
     #THE MAIN ERIBYTE SERVER
-    guild_id = '1144711250673148024'
     urlBase = 'http://10.0.0.6:8080'
     DTOKEN = Secrets.DISCORD_TOKEN
 
 elif(env == "LOCAL"):
     #ERIBYTE TEST SITE ALPHA
-    guild_id = '1166059727722131577'
     urlBase = 'http://127.0.0.1:8080'
     DTOKEN = Secrets.DISCORD_BETA_TOKEN
     
 elif(env == "DEV"):
-    #ERIBYTE TEST SITE ALPHA
-    guild_id = '1166059727722131577'
     #can't be used locally
     urlBase = 'http://10.0.0.6:8080'
     DTOKEN = Secrets.DISCORD_BETA_TOKEN
@@ -90,48 +113,27 @@ twitch = None
 youtube = None
 
 
-class Stream:
-    def __init__(self, unixts, name):
-        self.unixts = unixts
-        self.name = name
-    def __lt__(self, other):
-        return self.unixts < other.unixts
-    def __str__(self):
-        return self.name +', '+ str(self.unixts)
 
 
-@tree.command(name = "compliment", description="says something nice about you",  guild=discord.Object(id=guild_id))
+
+@tree.command(name = "compliment", description="says something nice about you")
 async def compliment(interaction: discord.Interaction):
     comments = [ "You go, girl!", "Are you fucking kidding me? HELL yeah!", "Great job!", "I love it!", "Amazing work!", "Well done!", "Impressive!", "Fantastic!", "You nailed it!", "Awesome!", "Brilliant!", "Keep it up!" ] 
     random_comment = random.choice(comments) 
     await interaction.response.send_message(random_comment)
 
-@tree.command(name = "schedule",description="get the schedule for the next week", guild=discord.Object(id=guild_id))
+@tree.command(name = "schedule",description="get the schedule for the next week")
 async def schedule(interaction: discord.Interaction):
-    currentTime = str(time.time())[:-4]
-    currentTime = ''.join(currentTime.split('.'))
 
-    if(len(currentTime)<13):
-        currentTime = currentTime.ljust(13,'0')
+    guild = str(interaction.guild_id)
 
-    url = urlBase + '/test/' + currentTime
+    if not guild in guild_id_lookup:
+        r = crudService.getStreamer(guild)
+        await addStreamerToGuildList(guild,r)
 
-    r = requests.get(url)
+    streamer = guild_id_lookup[guild]
 
-    print(r.status_code)
-
-    streamButFunky = r.json()
-
-    print(streamButFunky)
-
-    streamList = []
-
-    for stream in streamButFunky:
-        unixts = parse_timestamp(stream["scheduleEntityKey"]['date'][:-5])
-        unixts = datetime.datetime.timestamp(unixts)
-        streamObj = Stream(unixts,stream['streamName'])
-        streamList.append(streamObj)
-
+    streamList = crudService.getStreams(streamer.streamer_id)
 
     streamList.sort()
     msg_to_send= ''
@@ -145,31 +147,18 @@ async def schedule(interaction: discord.Interaction):
     await interaction.response.send_message(msg_to_send)
     pass
 
-@tree.command(name = "next-stream",description="get the next stream", guild=discord.Object(id=guild_id))
+@tree.command(name = "next-stream",description="get the next stream")
 async def nextStream(interaction: discord.Interaction):
-    #get current time in proper format
-    currentTime = str(time.time())[:-4]
-    currentTime = ''.join(currentTime.split('.'))
+    guild = str(interaction.guild_id)
 
-    if(len(currentTime)<13):
-        currentTime = currentTime.ljust(13,'0')
+    if not guild in guild_id_lookup:
+        
+        r = crudService.getStreamer(guild)
+        await addStreamerToGuildList(guild,r)
 
-    #url for getting streams
-    url = urlBase + '/test/' + currentTime
+    streamer = guild_id_lookup[guild]
 
-    #get streams
-    r = requests.get(url)
-
-    streamButFunky = r.json()
-
-    streamList = []
-
-    #clean steam data
-    for stream in streamButFunky:
-        unixts = parse_timestamp(stream["scheduleEntityKey"]['date'][:-5])
-        unixts = datetime.datetime.timestamp(unixts)
-        streamObj = Stream(unixts,stream['streamName'])
-        streamList.append(streamObj)
+    streamList = crudService.getStreams(streamer.streamer_id)
 
     #sort by closest to furthest
     streamList.sort()
@@ -187,7 +176,7 @@ async def nextStream(interaction: discord.Interaction):
     #send message
     await interaction.response.send_message(msg_to_send)
 
-@tree.command(name = "get-level",description="get your current level!", guild=discord.Object(id=guild_id))
+@tree.command(name = "get-level",description="get your current level!")
 async def getLevel(interaction: discord.Interaction):
     #get id from user
     id = interaction.user.id
@@ -223,24 +212,8 @@ async def getLevel(interaction: discord.Interaction):
     #send
     await interaction.response.send_message(message)
 
-@client.event
-async def on_message(message):
-    #bots do not get levels cuz they are stinky
-    if message.author == client.user:
-        return 
-    
-    # get user id
-    id = message.author.id 
 
-    #get data from id
-    data = crudService.getDataFromDiscordId(id)
-
-    #if new account or time between messages is enuf, add xp
-    if(data['lastMessageXp']==None or crudService.enoughTime(data['lastMessageXp'])):
-        amount = random.randint(1,5)
-        await add_xp_handler(id,amount,True,message.author)
-
-@tree.command(name = "connect-twitch",description="connect your twitch and discord account for more XP!", guild=discord.Object(id=guild_id))
+@tree.command(name = "connect-twitch",description="connect your twitch and discord account for more XP!")
 async def connectTwitch(interaction: discord.Interaction, username:str):
 
     id = interaction.user.id
@@ -264,105 +237,159 @@ async def connectTwitch(interaction: discord.Interaction, username:str):
 
     await interaction.response.send_message("# this you? ',:^)",embed=embed, ephemeral=True,view=buttonMenu)
 
-@tree.command(name = "add-stream", description="Add a stream to the database", guild=discord.Object(id=guild_id))
+@tree.command(name = "add-stream", description="Add a stream to the database")
 async def addStream(interaction: discord.Interaction, timestamp: str, stream_name: str, description: str):
-    if interaction.user.id in allowed_stream_list:
-        crudService.addStream(timestamp,stream_name,description)
+    if isAdmin(interaction.user):
+        guild = str(interaction.guild_id)
+
+        if not guild in guild_id_lookup:
+            
+            r = crudService.getStreamer(guild)
+            await addStreamerToGuildList(guild,r)
+
+        streamer = guild_id_lookup[guild]
+
+        crudService.addStream(timestamp,stream_name,streamer.streamer_id)
         await interaction.response.send_message("That probably worked lmao")
     else:
         await interaction.response.send_message("HEY LOSER MC DORK FACE, NICE TRY BUT UR NOT ***ALLOWED***")
 
-@tree.command(name = "add-events",description="add a weeks worth of streams BAYBEE", guild=discord.Object(id=guild_id))
+@tree.command(name = "add-events",description="add a weeks worth of events")
 async def addEvents(interaction: discord.Interaction):
-    if interaction.user.id in allowed_stream_list:
-
-        currentTime = str(time.time())[:-4]
-        currentTime = ''.join(currentTime.split('.'))
-
-        if(len(currentTime)<13):
-            currentTime = currentTime.ljust(13,'0')
-
-        url = urlBase + '/test/' + currentTime
-
-        r = requests.get(url)
-
-        print(r.status_code)
-
-        streamButFunky = r.json()
-
-        print(streamButFunky)
-
-        streamList = []
-
-        for stream in streamButFunky:
-            unixts = parse_timestamp(stream["scheduleEntityKey"]['date'][:-5])
-            streamObj = Stream(unixts,stream['streamName'])
-            streamList.append(streamObj)
-
-
-        streamList.sort()
-
-        for stream in streamList:
-            await interaction.guild.create_scheduled_event(name = stream.name, 
-                                                           description="Watch me live on twitch! :D", 
-                                                           start_time=stream.unixts, 
-                                                           end_time=stream.unixts + datetime.timedelta(hours=2),
-                                                           location="https://twitch.tv/eribytevt",
-                                                           entity_type=discord.EntityType.external,
-                                                           privacy_level=discord.PrivacyLevel.guild_only)
-            
-        await interaction.response.send_message("Dat worked boss -- ur faveorite GOON")
-
-
-
-    else:
+    if not isAdmin(interaction.user):
         await interaction.response.send_message("HEY LOSER MC DORK FACE, NICE TRY BUT UR NOT ***ALLOWED***")
+        return
 
-@tree.command(name = "schedule-image",description="add a weeks worth of streams BAYBEE", guild=discord.Object(id=guild_id))
-async def addEvents(interaction: discord.Interaction):
-    currentTime = str(time.time())[:-4]
-    currentTime = ''.join(currentTime.split('.'))
 
-    if(len(currentTime)<13):
-        currentTime = currentTime.ljust(13,'0')
+    guild = str(interaction.guild_id)
 
-    url = urlBase + '/test/' + currentTime
+    if not guild in guild_id_lookup:
+        
+        r = crudService.getStreamer(guild)
+        await addStreamerToGuildList(guild,r)
 
-    r = requests.get(url)
+    streamer = guild_id_lookup[guild]
 
-    print(r.status_code)
+    streamList = crudService.getStreams(streamer.streamer_id)
 
-    streamButFunky = r.json()
-
-    print(streamButFunky)
-
-    streamList = []
-
-    for stream in streamButFunky:
-        unixts = parse_timestamp(stream["scheduleEntityKey"]['date'][:-5])
-        streamObj = Stream(unixts,stream['streamName'])
-        streamList.append(streamObj)
-
+    for stream in streamList:
+        unixts = stream.unixts
+        datetime_obj = datetime.datetime.fromtimestamp(unixts).astimezone(pytz.timezone(streamer.timezone))
+        stream.unixts = datetime_obj
 
     streamList.sort()
 
-    makeImage(streamList)
+    for stream in streamList:
+        await interaction.guild.create_scheduled_event(name = stream.name, 
+                                                        description="Watch me live on twitch! :D", 
+                                                        start_time=stream.unixts, 
+                                                        end_time=stream.unixts + datetime.timedelta(hours=2),
+                                                        location="https://twitch.tv/eribytevt",
+                                                        entity_type=discord.EntityType.external,
+                                                        privacy_level=discord.PrivacyLevel.guild_only)
+        
+    await interaction.response.send_message("Dat worked boss -- ur faveorite GOON")
+
+    
+
+@tree.command(name = "schedule-image",description="Create an image with your schedule on it")
+async def scheduleImage(interaction: discord.Interaction):
+
+    guild = str(interaction.guild_id)
+
+    if not guild in guild_id_lookup:
+        
+        r = crudService.getStreamer(guild)
+        await addStreamerToGuildList(guild,r)
+
+    streamer = guild_id_lookup[guild]
+
+    streamList = crudService.getStreams(streamer.streamer_id)
+
+
+    for stream in streamList:
+        unixts = stream.unixts
+        datetime_obj = datetime.datetime.fromtimestamp(unixts)
+        stream.unixts = datetime_obj
+
+    streamList.sort()
+
+    makeImage(streamList,streamer)
         
     await interaction.response.send_message(file = discord.File("schedule.png"))
 
 
-def makeImage(streams):
-    im = Image.open("assets/bg.png")
+@tree.command(name = "edit-schedule",description="edit schedule")
+async def editSchedule(interaction: discord.Interaction):
+    if not isAdmin(interaction.user):
+        await interaction.response.send_message("HEY LOSER MC DORK FACE, NICE TRY BUT UR NOT ***ALLOWED***")
+        return
 
-    box = Image.open("assets/box.png")
+    guild = str(interaction.guild_id)
 
-    logo = Image.open("Assets/logo.png")
+    if not guild in guild_id_lookup:
+        
+        r = crudService.getStreamer(guild)
+        await addStreamerToGuildList(guild,r)
 
-    artPossible = os.listdir("assets/eri_art")
+    streamer = guild_id_lookup[guild]
+
+    streamList = crudService.getStreams(streamer.streamer_id)
+
+    streamList.sort()
+        
+    await interaction.response.send_message(view=Eribot_Views_Modals.ScheduleMenu(streamList,streamer,crudService),ephemeral=True)
+
+
+@client.event
+async def on_message(message):
+    #bots do not get levels cuz they are stinky
+    if message.author == client.user:
+        return 
+    
+    guild = str(message.guild.id)
+
+    if not guild in guild_id_lookup:
+        
+        r = crudService.getStreamer(guild)
+        await addStreamerToGuildList(guild,r)
+
+    streamer = guild_id_lookup[guild]
+
+    if streamer.level_system != "Y":
+        return
+    
+    # get user id
+    id = message.author.id 
+
+    #get data from id
+    data = crudService.getDataFromDiscordId(id)
+
+    #if new account or time between messages is enuf, add xp
+    if(data['lastMessageXp']==None or crudService.enoughTime(data['lastMessageXp'])):
+        amount = random.randint(1,5)
+        await add_xp_handler(id,amount,True,message.author, streamer)
+
+def makeImage(streams,streamer):
+
+    base_path = "assets/"
+
+    if os.path.exists(base_path + streamer.guild + '/'):
+        base_path += streamer.guild + '/'
+    else:
+        base_path += 'default/'
+
+    im = Image.open(base_path+"bg.png")
+
+    box = Image.open(base_path+"box.png")
+
+    logo = Image.open(base_path+"logo.png")
+
+    artPossible = os.listdir(base_path+"eri_art")
 
     choice = random.choice(artPossible)
 
-    art = Image.open(f"assets/eri_art/{choice}")
+    art = Image.open(base_path+f"eri_art/{choice}")
     print(art)
 
 
@@ -394,8 +421,9 @@ def makeImage(streams):
             
             if month == stream_month and day == stream_day:
                 stream_data = stream.name
-                stream_time = stream.unixts.time().strftime("%I:%M %p")
-                time_zone = "CST"
+                stream_time = stream.unixts.astimezone(pytz.timezone(streamer.timezone)).time().strftime("%I:%M %p")
+                time_zone = pytz.timezone(streamer.timezone).tzname(stream.unixts)
+                print(time_zone)
 
         if stream_data == "":
             stream_data = "N/A"
@@ -425,8 +453,7 @@ def makeImage(streams):
     im.save("schedule.png")
 
 
-
-async def add_xp_handler(id,xp_to_add, update, member):
+async def add_xp_handler(id,xp_to_add, update, member, streamer):
     data = crudService.getAssociatedFromDiscord(id)
 
     #not in db at all
@@ -448,7 +475,8 @@ async def add_xp_handler(id,xp_to_add, update, member):
 
         
     if(levelAfter > levelBefore):
-        level_role = '1187978756829225051'
+
+        level_role = streamer.level_ping_role
 
         can_ping = False
         for role in member.roles:
@@ -456,28 +484,44 @@ async def add_xp_handler(id,xp_to_add, update, member):
                 can_ping = True
 
         if(can_ping):
-            await LEVEL_CHANNEL.send(f"Congrats <@{id}> for reaching level {levelAfter}!!!")
+            await streamer.level_channel.send(f"Congrats <@{id}> for reaching level {levelAfter}!!!")
         else:
-            await LEVEL_CHANNEL.send(f"Congrats {member.display_name} for reaching level {levelAfter}!!!")
+            await streamer.level_channel.send(f"Congrats {member.display_name} for reaching level {levelAfter}!!!")
+
+async def addStreamerToGuildList(guild_id, sj):
+    streamer = Streamer(sj["streamerId"],sj["streamerName"],sj["timezone"],sj["guild"],sj["levelSystem"],sj["levelPingRole"],sj["levelChannel"])
+    
+    if(streamer.level_system == "Y"):
+        level_channel =  await client.fetch_channel(streamer.level_channel_id)
+        streamer.setLevelChannel(level_channel)
+
+
+    guild_id_lookup[guild_id] = streamer
+
+    print("Cached Streamer")
+
+
+def isAdmin(user):
+    roles = user.roles 
+    allowed = False
+    for role in roles:
+        if role.permissions.administrator:
+            allowed = True 
+
+    return allowed
+
 
 
 @client.event
 async def on_ready():
     global LEVEL_CHANNEL, twitch
     await client.change_presence(status=discord.Status.online)
-    await tree.sync(guild=discord.Object(id=guild_id))
-
-    if env == "PROD":
-        LEVEL_CHANNEL = await client.fetch_channel('1188018666957189122')
-
-    elif env == "DEV" or env == "LOCAL":
-        LEVEL_CHANNEL = await client.fetch_channel('1188014511446302803')
+    # await tree.sync(guild=discord.Object(id=1166059727722131577))
 
     twitch = await Twitch(Secrets.APP_ID, Secrets.APP_SECRET)
     # youtube = Client(api_key=Secrets.YOUTUBE_API_KEY)
 
     if on_ready :
-        # called_once_a_day.start()
         print("RUNNING")
 
 client.run(DTOKEN)

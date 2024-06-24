@@ -6,8 +6,17 @@ import datetime
 import re 
 import pytz 
 
+class Stream:
+    def __init__(self, unixts, name):
+        self.unixts = unixts
+        self.name = name
+    def __lt__(self, other):
+        return self.unixts < other.unixts
+    def __str__(self):
+        return self.name +', '+ str(self.unixts)
+
 class CrudWrapper:
-    def __init__(self,env):
+    def __init__(self,env,password):
         self.env = env
         if(env == "PROD"):
             self.urlBase = 'http://10.0.0.6:8080'
@@ -20,6 +29,10 @@ class CrudWrapper:
 
         else:
             raise Exception("ERROR, ENV NOT SET")
+        
+        self.password = password
+
+
     def getLevelFromXp(self,xp):
         """
         THE 2 FUNCTIONS FOR XP:
@@ -105,7 +118,7 @@ class CrudWrapper:
 
     def addTwitchToDiscord(self,discord_id, twitch_id):
         #data for update
-        data = {"discordId":discord_id,"serviceId":twitch_id}
+        data = {"discordId":discord_id,"serviceId":twitch_id,"password":self.password}
 
         #data to send update to
         url = self.urlBase + '/addConnectionDiscord/twitch'
@@ -116,7 +129,7 @@ class CrudWrapper:
         return request
 
     def addYoutubeToDiscord(self,discord_id, youtube_id):
-        data = {"discordId":discord_id,"serviceId":youtube_id}
+        data = {"discordId":discord_id,"serviceId":youtube_id,"password":self.password}
 
         #data to send update to
         url = self.urlBase + '/addConnectionDiscord/youtube'
@@ -244,7 +257,7 @@ class CrudWrapper:
             currentTime+='0'
         
         #data for update
-        data = {"id":id,"xp":xp,"updateTime":update,"newTime":currentTime}
+        data = {"id":id,"xp":xp,"updateTime":update,"newTime":currentTime,"password":self.password}
 
         #data to send update to
         url = self.urlBase + '/update/discord'
@@ -263,7 +276,7 @@ class CrudWrapper:
             currentTime+='0'
         
         #data for update
-        data = {"id":id,"xp":xp,"updateTime":update,"newTime":currentTime}
+        data = {"id":id,"xp":xp,"updateTime":update,"newTime":currentTime,"password":self.password}
 
         #data to send update to
         url = self.urlBase + '/update/twitch'
@@ -282,7 +295,7 @@ class CrudWrapper:
             currentTime+='0'
         
         #data for update
-        data = {"id":id,"xp":xp,"updateTime":update,"newTime":currentTime}
+        data = {"id":id,"xp":xp,"updateTime":update,"newTime":currentTime,"password":self.password}
 
         #data to send update to
         url = self.urlBase + '/update/youtube'
@@ -312,12 +325,61 @@ class CrudWrapper:
         
         return False
     
-    def addStream(self, timestamp, streamName, description):
-        data = {"timestamp":timestamp, "streamName": streamName,"description":description}
-        url = self.urlBase + '/AddStream'
+    ################################################## STREAM TABLE STUFF ###################################
+
+    
+    def addStream(self,timestamp,streamName,streamerId):
+        data = {"timestamp":timestamp, "streamName": streamName,"streamerId":streamerId,"password":self.password}
+        url = self.urlBase + '/AddStreamTable'
         request = requests.post(url,json=data).text
-        
+
         return request
+    
+    def getStreams(self,streamerId):
+        currentTime = str(time.time())[:-4]
+        currentTime = ''.join(currentTime.split('.'))
+
+        if(len(currentTime)<13):
+            currentTime = currentTime.ljust(13,'0')
+
+        url = self.urlBase + '/getStreams/' + streamerId + "/" + currentTime
+
+        r = requests.get(url)
+
+        streamButFunky = r.json()
+
+        streamList = []
+
+        for stream in streamButFunky:
+            unixts = parse_timestamp(stream["streamTableEntityKey"]['streamDate'][:-5])
+            unixts = datetime.datetime.timestamp(unixts)
+            streamObj = Stream(unixts,stream['streamName'])
+            streamList.append(streamObj)
+
+        return streamList
+    
+    def getStreamer(self,guild_id):
+        url = self.urlBase + '/getStreamer/' + guild_id;
+        r = requests.get(url)
+
+        return r.json();
+
+    ############################ EDIT AND DELETE #############################################################
+
+    def deleteStream(self,timestamp,streamName,streamerId):
+        data = {"timestamp":int(timestamp), "streamName": streamName,"streamerId":streamerId,"password":self.password}
+        url = self.urlBase + '/deleteStream'
+        request = requests.post(url,json=data).text
+
+        return request
+
+    def editStream(self,timestamp,streamName,streamerId,newTimestamp,newStreamName):
+        data = {"timestamp":int(timestamp), "streamName": streamName,"streamerId":streamerId,"newTimestamp":int(newTimestamp),"newName":newStreamName,"password":self.password}
+        url = self.urlBase + '/editStream'
+        request = requests.post(url,json=data).text
+
+        return request
+
 
     
 def parse_timestamp(timestamp):
