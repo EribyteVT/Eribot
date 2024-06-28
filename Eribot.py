@@ -16,6 +16,7 @@ from CrudWrapper import parse_timestamp, CrudWrapper
 from PIL import Image, ImageDraw, ImageFont
 import os
 import Eribot_Views_Modals
+from typing import Optional, Union
 
 class Streamer:
     def __init__(self,streamer_id,streamer_name,timezone,guild,level_system,level_ping_role,level_channel):
@@ -290,7 +291,19 @@ async def addEvents(interaction: discord.Interaction):
         
     await interaction.response.send_message("Dat worked boss -- ur faveorite GOON")
 
-    
+@tree.command(name = "sync", description="Syncs the tree (admin only)")
+async def sync(interaction: discord.Interaction, guild_id_to_sync: Optional[str]):
+    if(isAdmin(interaction.user)):
+        if(guild_id_to_sync != None):
+            to_sync = guild_id_to_sync
+        else:
+            to_sync = interaction.guild.id
+        
+        await tree.sync(guild=discord.Object(id=to_sync))
+        await interaction.response.send_message("Synced!")
+    else:
+        await interaction.response.send_message("Insufficient permissions")
+
 
 @tree.command(name = "schedule-image",description="Create an image with your schedule on it")
 async def scheduleImage(interaction: discord.Interaction):
@@ -342,7 +355,7 @@ async def editSchedule(interaction: discord.Interaction):
 
 
 @client.event
-async def on_message(message):
+async def on_message(message:discord.Message):
     #bots do not get levels cuz they are stinky
     if message.author == client.user:
         return 
