@@ -17,6 +17,7 @@ from PIL import Image, ImageDraw, ImageFont
 import os
 import Eribot_Views_Modals
 from typing import Optional, Union
+from image_utils import ImageText
 
 class Streamer:
     def __init__(self,streamer_id,streamer_name,timezone,guild,level_system,level_ping_role,level_channel):
@@ -82,7 +83,7 @@ intents = discord.Intents.all()
 client = discord.Client(intents = intents)
 tree = app_commands.CommandTree(client)
 
-env = "LOCAL"
+env = "DEV"
 
 crudService = CrudWrapper(env,Secrets.CRUD_PASSWORD)
 
@@ -130,11 +131,18 @@ async def schedule(interaction: discord.Interaction):
 
     if not guild in guild_id_lookup:
         r = crudService.getStreamer(guild)
+        if r == False:
+            await interaction.response.send_message("Failed to get streamer from Database")
+            return
         await addStreamerToGuildList(guild,r)
 
     streamer = guild_id_lookup[guild]
 
     streamList = crudService.getStreams(streamer.streamer_id)
+
+    if len(streamList) == 0:
+        await interaction.response.send_message("No Streams in the next week.")
+        return
 
     streamList.sort()
     msg_to_send= ''
@@ -143,7 +151,7 @@ async def schedule(interaction: discord.Interaction):
         msg_to_send += f'{item.name} - <t:{str(item.unixts).split(".")[0]}> \n'
     
     if(msg_to_send == ''):
-        msg_to_send = 'Error getting from db, please try again'
+        msg_to_send = 'Error'
         
     await interaction.response.send_message(msg_to_send)
     pass
@@ -153,8 +161,10 @@ async def nextStream(interaction: discord.Interaction):
     guild = str(interaction.guild_id)
 
     if not guild in guild_id_lookup:
-        
         r = crudService.getStreamer(guild)
+        if r == False:
+            await interaction.response.send_message("Failed to get streamer from Database")
+            return
         await addStreamerToGuildList(guild,r)
 
     streamer = guild_id_lookup[guild]
@@ -166,8 +176,8 @@ async def nextStream(interaction: discord.Interaction):
     msg_to_send= ''
 
     #incase it errors
-    if(len(streamList)<0):
-        interaction.response.send_message("Error retrieving entities from the databse")
+    if(len(streamList) == 0):
+        interaction.response.send_message("No Streams in the next week.")
         return
 
     #format messages
@@ -250,7 +260,11 @@ async def addStream(interaction: discord.Interaction, timestamp: str, stream_nam
 
         streamer = guild_id_lookup[guild]
 
-        crudService.addStream(timestamp,stream_name,streamer.streamer_id)
+        response = crudService.addStream(timestamp,stream_name,streamer.streamer_id)
+
+        if response == "False":
+            await interaction.response.send_message("Error, invalid timestamp")
+            return
         await interaction.response.send_message("That probably worked lmao")
     else:
         await interaction.response.send_message("HEY LOSER MC DORK FACE, NICE TRY BUT UR NOT ***ALLOWED***")
@@ -267,6 +281,9 @@ async def addEvents(interaction: discord.Interaction):
     if not guild in guild_id_lookup:
         
         r = crudService.getStreamer(guild)
+        if r == False:
+            await interaction.response.send_message("Failed to get streamer from Database")
+            return
         await addStreamerToGuildList(guild,r)
 
     streamer = guild_id_lookup[guild]
@@ -279,17 +296,20 @@ async def addEvents(interaction: discord.Interaction):
         stream.unixts = datetime_obj
 
     streamList.sort()
+    try:
+        for stream in streamList:
+            await interaction.guild.create_scheduled_event(name = stream.name, 
+                                                            description="Watch me live on twitch! :D", 
+                                                            start_time=stream.unixts, 
+                                                            end_time=stream.unixts + datetime.timedelta(hours=2),
+                                                            location="https://twitch.tv/eribytevt",
+                                                            entity_type=discord.EntityType.external,
+                                                            privacy_level=discord.PrivacyLevel.guild_only)
+            
+        await interaction.response.send_message("Events added!")
 
-    for stream in streamList:
-        await interaction.guild.create_scheduled_event(name = stream.name, 
-                                                        description="Watch me live on twitch! :D", 
-                                                        start_time=stream.unixts, 
-                                                        end_time=stream.unixts + datetime.timedelta(hours=2),
-                                                        location="https://twitch.tv/eribytevt",
-                                                        entity_type=discord.EntityType.external,
-                                                        privacy_level=discord.PrivacyLevel.guild_only)
-        
-    await interaction.response.send_message("Dat worked boss -- ur faveorite GOON")
+    except:
+        await interaction.response.send_message("An error has occured")
 
 @tree.command(name = "sync", description="Syncs the tree (admin only)")
 async def sync(interaction: discord.Interaction, guild_id_to_sync: Optional[str]):
@@ -313,6 +333,9 @@ async def scheduleImage(interaction: discord.Interaction):
     if not guild in guild_id_lookup:
         
         r = crudService.getStreamer(guild)
+        if r == False:
+            await interaction.response.send_message("Failed to get streamer from Database")
+            return
         await addStreamerToGuildList(guild,r)
 
     streamer = guild_id_lookup[guild]
@@ -383,6 +406,11 @@ async def on_message(message:discord.Message):
         amount = random.randint(1,5)
         await add_xp_handler(id,amount,True,message.author, streamer)
 
+@client.event
+async def on_raw_reaction_add(payload: discord.RawReactionActionEvent):
+    print("Reacted")
+
+
 def makeImage(streams,streamer):
 
     base_path = "assets/"
@@ -404,12 +432,6 @@ def makeImage(streams,streamer):
 
     art = Image.open(base_path+f"eri_art/{choice}")
     print(art)
-
-
-    topLeft = (686,21)
-    topRight = (1898,21)
-    bottomLeft = (686,145)
-    bottomRight = (1898,145)
 
     myFont = ImageFont.truetype('assets/KOMIKAX.ttf', 40)
     smolFont = ImageFont.truetype('assets/KOMIKAX.ttf', 25)
@@ -449,7 +471,22 @@ def makeImage(streams,streamer):
         I1.text((775, 26+ (151*i)),f"{month}/{day}", font=myFont, fill=(0, 0, 0)) 
         I1.text((790, 80+ (151*i)),f"{weekday}", font=smolFont, fill=(0, 0, 0)) 
 
-        I1.text((990, 46+ (151*i)),f"{stream_data}", font=myFont, fill=(0, 0, 0)) 
+
+        size = 40
+        
+
+        while True:
+            nameFont = ImageFont.truetype('assets/KOMIKAX.ttf', size)
+            length = nameFont.getlength(stream_data)
+            
+            print(length)
+
+            if length <= 736 or size == 1:
+                break
+
+            size -=1
+
+        I1.text((990, 46+ (151*i)),f"{stream_data}", font=nameFont, fill=(0, 0, 0)) 
 
         if stream_time == "":
             I1.text((1780, 36+ (151*i)),f"N/A", font=myFont, fill=(0, 0, 0)) 
@@ -532,6 +569,7 @@ async def on_ready():
     # await tree.sync(guild=discord.Object(id=1166059727722131577))
 
     twitch = await Twitch(Secrets.APP_ID, Secrets.APP_SECRET)
+
     # youtube = Client(api_key=Secrets.YOUTUBE_API_KEY)
 
     if on_ready :

@@ -25,7 +25,7 @@ class CrudWrapper:
             self.urlBase = 'http://127.0.0.1:8080'
             
         elif(env == "DEV"):
-            self.urlBase = 'https://crud.eribyte.net'
+            self.urlBase = 'http://10.0.0.6:8080'
 
         else:
             raise Exception("ERROR, ENV NOT SET")
@@ -346,6 +346,10 @@ class CrudWrapper:
 
         r = requests.get(url)
 
+        if r.status_code != 200:
+            print("Error")
+            return False
+
         streamButFunky = r.json()
 
         streamList = []
@@ -361,6 +365,10 @@ class CrudWrapper:
     def getStreamer(self,guild_id):
         url = self.urlBase + '/getStreamer/' + guild_id;
         r = requests.get(url)
+
+        if r.status_code != 200 or r.text == "" or r.text == None:
+            print("Error")
+            return False
 
         return r.json();
 
