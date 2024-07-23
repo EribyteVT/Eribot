@@ -17,7 +17,7 @@ from PIL import Image, ImageDraw, ImageFont
 import os
 import Eribot_Views_Modals
 from typing import Optional, Union
-from image_utils import ImageText
+import traceback
 
 class Streamer:
     def __init__(self,streamer_id,streamer_name,timezone,guild,level_system,level_ping_role,level_channel):
@@ -298,17 +298,18 @@ async def addEvents(interaction: discord.Interaction):
     streamList.sort()
     try:
         for stream in streamList:
-            await interaction.guild.create_scheduled_event(name = stream.name, 
+            await interaction.guild.create_scheduled_event(name = stream.name[:100], 
                                                             description="Watch me live on twitch! :D", 
                                                             start_time=stream.unixts, 
                                                             end_time=stream.unixts + datetime.timedelta(hours=2),
-                                                            location="https://twitch.tv/eribytevt",
+                                                            location="https://twitch.tv/"+streamer.streamer_name,
                                                             entity_type=discord.EntityType.external,
                                                             privacy_level=discord.PrivacyLevel.guild_only)
             
         await interaction.response.send_message("Events added!")
 
-    except:
+    except Exception as err:
+        print(traceback.format_exc())
         await interaction.response.send_message("An error has occured")
 
 @tree.command(name = "sync", description="Syncs the tree (admin only)")
