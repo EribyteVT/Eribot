@@ -27,6 +27,9 @@ class CrudWrapper:
         elif(env == "DEV"):
             self.urlBase = 'http://10.0.0.6:8080'
 
+        elif(env == "DEV_REMOTE"):
+            self.urlBase = 'http://crud.eribyte.net'
+
         else:
             raise Exception("ERROR, ENV NOT SET")
         

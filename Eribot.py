@@ -11,7 +11,7 @@ import pytz
 from math import floor
 from twitchAPI.helper import first
 from twitchAPI.twitch import Twitch
-from pyyoutube import Client
+# from pyyoutube import Client
 from CrudWrapper import parse_timestamp, CrudWrapper
 from PIL import Image, ImageDraw, ImageFont
 import os
@@ -84,7 +84,7 @@ intents = discord.Intents.all()
 client = discord.Client(intents = intents)
 tree = app_commands.CommandTree(client)
 
-env = "DEV"
+env = "DEV_REMOTE"
 
 crudService = CrudWrapper(env,Secrets.CRUD_PASSWORD)
 
@@ -105,6 +105,10 @@ elif(env == "LOCAL"):
 elif(env == "DEV"):
     #can't be used locally
     urlBase = 'http://10.0.0.6:8080'
+    DTOKEN = Secrets.DISCORD_BETA_TOKEN
+
+elif(env == "DEV_REMOTE"):
+    urlBase = "http://crud.eribyte.net"
     DTOKEN = Secrets.DISCORD_BETA_TOKEN
 
 else:
