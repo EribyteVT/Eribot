@@ -11,13 +11,14 @@ import pytz
 from math import floor
 from twitchAPI.helper import first
 from twitchAPI.twitch import Twitch
-from pyyoutube import Client
+# from pyyoutube import Client
 from CrudWrapper import parse_timestamp, CrudWrapper
 from PIL import Image, ImageDraw, ImageFont
 import os
 import Eribot_Views_Modals
 from typing import Optional, Union
 import traceback
+from schedule_maker import make_schedule
 
 class Streamer:
     def __init__(self,streamer_id,streamer_name,timezone,guild,level_system,level_ping_role,level_channel):
@@ -83,7 +84,7 @@ intents = discord.Intents.all()
 client = discord.Client(intents = intents)
 tree = app_commands.CommandTree(client)
 
-env = "DEV"
+env = "DEV_REMOTE"
 
 crudService = CrudWrapper(env,Secrets.CRUD_PASSWORD)
 
@@ -104,6 +105,10 @@ elif(env == "LOCAL"):
 elif(env == "DEV"):
     #can't be used locally
     urlBase = 'http://10.0.0.6:8080'
+    DTOKEN = Secrets.DISCORD_BETA_TOKEN
+
+elif(env == "DEV_REMOTE"):
+    urlBase = "http://crud.eribyte.net"
     DTOKEN = Secrets.DISCORD_BETA_TOKEN
 
 else:
@@ -265,7 +270,7 @@ async def addStream(interaction: discord.Interaction, timestamp: str, stream_nam
         if response == "False":
             await interaction.response.send_message("Error, invalid timestamp")
             return
-        await interaction.response.send_message("That probably worked lmao")
+        await interaction.response.send_message("That probabaly worked :D")
     else:
         await interaction.response.send_message("HEY LOSER MC DORK FACE, NICE TRY BUT UR NOT ***ALLOWED***")
 
@@ -351,9 +356,16 @@ async def scheduleImage(interaction: discord.Interaction):
 
     streamList.sort()
 
-    makeImage(streamList,streamer)
+    make_schedule(streamer,streamList)
+
+    base_path = "assets/"
+
+    if os.path.exists(base_path + streamer.guild + '/'):
+        base_path += streamer.guild + '/'
+    else:
+        base_path += 'default/'
         
-    await interaction.response.send_message(file = discord.File("schedule.png"))
+    await interaction.response.send_message(file = discord.File(base_path+"schedule.png"))
 
 
 @tree.command(name = "edit-schedule",description="edit schedule")
@@ -410,98 +422,6 @@ async def on_message(message:discord.Message):
 @client.event
 async def on_raw_reaction_add(payload: discord.RawReactionActionEvent):
     print("Reacted")
-
-
-def makeImage(streams,streamer):
-
-    base_path = "assets/"
-
-    if os.path.exists(base_path + streamer.guild + '/'):
-        base_path += streamer.guild + '/'
-    else:
-        base_path += 'default/'
-
-    im = Image.open(base_path+"bg.png")
-
-    box = Image.open(base_path+"box.png")
-
-    logo = Image.open(base_path+"logo.png")
-
-    artPossible = os.listdir(base_path+"eri_art")
-
-    choice = random.choice(artPossible)
-
-    art = Image.open(base_path+f"eri_art/{choice}")
-    print(art)
-
-    myFont = ImageFont.truetype('assets/KOMIKAX.ttf', 40)
-    smolFont = ImageFont.truetype('assets/KOMIKAX.ttf', 25)
-
-    today = datetime.date.today()
-    dateWeekdayNames = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"]
-
-
-    for i in range(7):
-        im.alpha_composite(box,(686,21 + (151*i)))
-        date = today + datetime.timedelta(i) 
-        month = date.month 
-        day = date.day
-
-        stream_data = ""
-        stream_time = ""
-        time_zone = ""
-
-        for stream in streams:
-            stream_month = stream.unixts.month
-            stream_day = stream.unixts.day
-            
-            if month == stream_month and day == stream_day:
-                stream_data = stream.name
-                stream_time = stream.unixts.astimezone(pytz.timezone(streamer.timezone)).time().strftime("%I:%M %p")
-                time_zone = pytz.timezone(streamer.timezone).tzname(stream.unixts)
-                print(time_zone)
-
-        if stream_data == "":
-            stream_data = "N/A"
-
-
-        weekday = dateWeekdayNames[date.weekday()]
-
-        I1 = ImageDraw.Draw(im)
-
-        I1.text((775, 26+ (151*i)),f"{month}/{day}", font=myFont, fill=(0, 0, 0)) 
-        I1.text((790, 80+ (151*i)),f"{weekday}", font=smolFont, fill=(0, 0, 0)) 
-
-
-        size = 40
-        
-
-        while True:
-            nameFont = ImageFont.truetype('assets/KOMIKAX.ttf', size)
-            length = nameFont.getlength(stream_data)
-            
-            print(length)
-
-            if length <= 736 or size == 1:
-                break
-
-            size -=1
-
-        I1.text((990, 46+ (151*i)),f"{stream_data}", font=nameFont, fill=(0, 0, 0)) 
-
-        if stream_time == "":
-            I1.text((1780, 36+ (151*i)),f"N/A", font=myFont, fill=(0, 0, 0)) 
-        else:
-            I1.text((1755, 36+ (151*i)),f"{stream_time}", font=smolFont, fill=(0, 0, 0)) 
-            I1.text((1800, 76+ (151*i)),f"{time_zone}", font=smolFont, fill=(0, 0, 0)) 
-
- 
-    im.alpha_composite(art,(0,1080-art.height))
-
-    im.alpha_composite(logo,(20,20))
-
-
-    im.save("schedule.png")
 
 
 async def add_xp_handler(id,xp_to_add, update, member, streamer):
