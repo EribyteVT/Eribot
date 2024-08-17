@@ -1,4 +1,4 @@
-FROM node:3.13-rc-bookworm⁠
+FROM python:3.13-rc-bookworm⁠
 WORKDIR /
 EXPOSE 3000
 COPY . .
