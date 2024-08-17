@@ -1,4 +1,4 @@
-FROM python:3.13-rc-bookworm⁠
+FROM python:3.9.13-slim-buster
 WORKDIR /
 EXPOSE 3000
 COPY . .
