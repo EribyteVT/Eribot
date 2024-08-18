@@ -18,6 +18,31 @@ spec:
           env:
             - name: ALLOW_EMPTY_PASSWORD
               value: "yes"
+            - name: APP_ID
+              valueFrom:
+                secretKeyRef:
+                  name: eribot-secrets
+                  key: APP_ID
+            - name: APP_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: eribot-secrets
+                  key: APP_SECRET
+            - name: CRUD_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: eribot-secrets
+                  key: CRUD_PASSWORD
+            - name: DISCORD_BETA_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: eribot-secrets
+                  key: DISCORD_BETA_TOKEN
+            - name: DISCORD_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: eribot-secrets
+                  key: DISCORD_TOKEN
   selector:
     matchLabels:
       app: ab

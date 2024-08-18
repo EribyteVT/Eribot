@@ -1,4 +1,3 @@
-import Secrets
 import discord
 from discord import app_commands
 from discord.ext import tasks
@@ -86,7 +85,7 @@ tree = app_commands.CommandTree(client)
 
 env = "DEV_REMOTE"
 
-crudService = CrudWrapper(env,Secrets.CRUD_PASSWORD)
+crudService = CrudWrapper(env,os.environ.get("CRUD_PASSWORD"))
 
 
 # guild id to streamer obj
@@ -95,21 +94,25 @@ guild_id_lookup = {}
 if(env == "PROD"):
     #THE MAIN ERIBYTE SERVER
     urlBase = 'http://10.0.0.6:8080'
-    DTOKEN = Secrets.DISCORD_TOKEN
+    DTOKEN = os.environ.get("DISCORD_TOKEN")
 
 elif(env == "LOCAL"):
     #ERIBYTE TEST SITE ALPHA
     urlBase = 'http://127.0.0.1:8080'
-    DTOKEN = Secrets.DISCORD_BETA_TOKEN
+    DTOKEN = os.environ.get("DISCORD_BETA_TOKEN")
     
 elif(env == "DEV"):
     #can't be used locally
     urlBase = 'http://10.0.0.6:8080'
-    DTOKEN = Secrets.DISCORD_BETA_TOKEN
+    DTOKEN = os.environ.get("DISCORD_BETA_TOKEN")
 
 elif(env == "DEV_REMOTE"):
     urlBase = "http://crud.eribyte.net"
-    DTOKEN = Secrets.DISCORD_BETA_TOKEN
+    DTOKEN = os.environ.get("DISCORD_BETA_TOKEN")
+
+elif (env == "K8S_TEST_DEPLOY"):
+    urlBase = "http://10.111.131.62:46468"
+    DTOKEN = os.environ.get("DISCORD_BETA_TOKEN")
 
 else:
     raise Exception("ERROR, ENV NOT SET")
@@ -489,7 +492,7 @@ async def on_ready():
     await client.change_presence(status=discord.Status.online)
     # await tree.sync(guild=discord.Object(id=1166059727722131577))
 
-    twitch = await Twitch(Secrets.APP_ID, Secrets.APP_SECRET)
+    twitch = await Twitch(os.environ.get("APP_ID"), os.environ.get("APP_SECRET"))
 
     # youtube = Client(api_key=Secrets.YOUTUBE_API_KEY)
 
