@@ -19,7 +19,7 @@ class CrudWrapper:
     def __init__(self,env,password):
         self.env = env
         if(env == "PROD"):
-            self.urlBase = 'http://10.0.0.6:8080'
+            self.urlBase = 'http://10.111.131.62:46468'
 
         elif(env == "LOCAL"):
             self.urlBase = 'http://127.0.0.1:8080'
