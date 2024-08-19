@@ -83,7 +83,7 @@ intents = discord.Intents.all()
 client = discord.Client(intents = intents)
 tree = app_commands.CommandTree(client)
 
-env = "K8S_TEST_DEPLOY"
+env = "PROD"
 
 crudService = CrudWrapper(env,os.environ.get("CRUD_PASSWORD"))
 
