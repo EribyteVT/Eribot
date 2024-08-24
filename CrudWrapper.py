@@ -368,16 +368,6 @@ class CrudWrapper:
             streamList.append(streamObj)
 
         return streamList
-    
-    def getStreamer(self,guild_id):
-        url = self.urlBase + '/getStreamer/' + guild_id;
-        r = requests.get(url)
-
-        if r.status_code != 200 or r.text == "" or r.text == None:
-            print("Error")
-            return False
-
-        return r.json();
 
     ############################ EDIT AND DELETE #############################################################
 
@@ -398,11 +388,35 @@ class CrudWrapper:
     ############################ TOKEN ######################################################################
 
     def get_token(self,streamerID):
-        data = {"streamerId":streamerID, "password":self.token_password}
+        data = {"twitchId":streamerID, "password":self.token_password}
         url = self.urlBase + '/token/getToken'
-        request = requests.post(url,json=data).text
+        request = requests.post(url,json=data)
 
-        return request
+        try:
+            return request.json()
+        except:
+            return ""
+    
+    ########################### STREAMER ######################################################################
+    def getStreamer(self,guild_id):
+        url = self.urlBase + '/getStreamer/' + guild_id;
+        r = requests.get(url)
+
+        if r.status_code != 200 or r.text == "" or r.text == None:
+            print("Error")
+            return False
+
+        return r.json();
+
+    def addTwitchToStreamer(self,streamer_id,twitch_id):
+        url = self.urlBase + '/streamer/addTwitch';
+        data = {"streamerId":streamer_id,
+                "twitchId":twitch_id,
+                "password":self.password}
+        
+        r = requests.post(url,json=data)
+
+        return r.text
 
 
     

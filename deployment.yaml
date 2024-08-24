@@ -43,6 +43,12 @@ spec:
                 secretKeyRef:
                   name: eribot-secrets
                   key: DISCORD_TOKEN
+            - name: ENDPOINT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: eribot-secrets
+                  key: ENDPOINT_PASSWORD
+                  
   selector:
     matchLabels:
       app: eribot

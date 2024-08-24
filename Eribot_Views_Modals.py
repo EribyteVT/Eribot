@@ -2,6 +2,7 @@ import discord
 import datetime
 import pytz
 import json
+import CrudWrapper
 
 class StreamInfo:
     def __init__(self, unixts,name,streamer_id):
@@ -124,3 +125,31 @@ class StreamTimeModal(discord.ui.Modal,title="New Stream Time"):
         self.crudService.editStream(self.stream["unixts"],self.stream["name"],self.stream["streamer_id"],new_time,self.stream["name"])
 
         await interaction.response.send_message("Changed!")
+
+class GuildConnect(discord.ui.View):
+    def __init__(self,streamer_id,twitch_id,crudService:CrudWrapper.CrudWrapper):
+        super().__init__()
+        self.value = None
+        self.streamer_id  = streamer_id
+        self.twitch_id = twitch_id
+        self.crudService=crudService
+
+    # When the button is pressed, set the inner value to `True` and
+    # stop the View from listening to more input.
+    # We also send the user an ephemeral message that we're confirming their choice.
+    @discord.ui.button(label='Yes', style=discord.ButtonStyle.green)
+    async def confirm(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.edit_message(content='Connecting...',embed=None,view=None,delete_after=1)
+
+        response = self.crudService.addTwitchToStreamer(self.streamer_id,self.twitch_id)
+
+        
+        await interaction.followup.send(response,ephemeral=True)
+        self.stop()
+
+    # This one is similar to the confirmation button except sets the inner value to `False`
+    @discord.ui.button(label='No', style=discord.ButtonStyle.grey)
+    async def cancel(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.edit_message(content='Very well, you can try again :3',embed=None,view=None)
+        self.value = False
+        self.stop()
