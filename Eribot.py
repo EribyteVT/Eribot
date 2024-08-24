@@ -10,6 +10,8 @@ import pytz
 from math import floor
 from twitchAPI.helper import first
 from twitchAPI.twitch import Twitch
+from twitchAPI.type import AuthScope
+from twitchAPI.oauth import UserAuthenticator
 # from pyyoutube import Client
 from CrudWrapper import parse_timestamp, CrudWrapper
 from PIL import Image, ImageDraw, ImageFont
@@ -18,6 +20,8 @@ import Eribot_Views_Modals
 from typing import Optional, Union
 import traceback
 from schedule_maker import make_schedule
+from Quart_Listener import app
+import asyncio
 
 class Streamer:
     def __init__(self,streamer_id,streamer_name,timezone,guild,level_system,level_ping_role,level_channel):
@@ -83,9 +87,9 @@ intents = discord.Intents.all()
 client = discord.Client(intents = intents)
 tree = app_commands.CommandTree(client)
 
-env = "PROD"
+env = "LOCAL"
 
-crudService = CrudWrapper(env,os.environ.get("CRUD_PASSWORD"))
+crudService = CrudWrapper(env,os.environ.get("CRUD_PASSWORD"), os.environ.get("CRUD_OAUTH_PASSWORD"))
 
 
 # guild id to streamer obj
@@ -96,19 +100,19 @@ if(env == "PROD"):
     urlBase = 'http://10.111.131.62:46468'
     DTOKEN = os.environ.get("DISCORD_TOKEN")
 
-# elif(env == "LOCAL"):
-#     #ERIBYTE TEST SITE ALPHA
-#     urlBase = 'http://127.0.0.1:8080'
-#     DTOKEN = os.environ.get("DISCORD_BETA_TOKEN")
+elif(env == "LOCAL"):
+    #ERIBYTE TEST SITE ALPHA
+    urlBase = 'http://127.0.0.1:8080'
+    DTOKEN = os.environ.get("DISCORD_BETA_TOKEN")
     
 # elif(env == "DEV"):
 #     #can't be used locally
 #     urlBase = 'http://10.0.0.6:8080'
 #     DTOKEN = os.environ.get("DISCORD_BETA_TOKEN")
 
-# elif(env == "DEV_REMOTE"):
-#     urlBase = "http://crud.eribyte.net"
-#     DTOKEN = os.environ.get("DISCORD_BETA_TOKEN")
+elif(env == "DEV_REMOTE"):
+    urlBase = "https://crud.eribyte.net"
+    DTOKEN = os.environ.get("DISCORD_BETA_TOKEN")
 
 elif (env == "K8S_TEST_DEPLOY"):
     urlBase = "http://10.111.131.62:46468"
@@ -322,16 +326,21 @@ async def addEvents(interaction: discord.Interaction):
 
 @tree.command(name = "sync", description="Syncs the tree (admin only)")
 async def sync(interaction: discord.Interaction, guild_id_to_sync: Optional[str]):
+    await interaction.response.defer(thinking=True)
+    list = await tree.sync()
+    for item in list:
+        print(item)
+    # print(list)
     if(isAdmin(interaction.user)):
         if(guild_id_to_sync != None):
             to_sync = guild_id_to_sync
         else:
             to_sync = interaction.guild.id
         
-        await tree.sync(guild=discord.Object(id=to_sync))
-        await interaction.response.send_message("Synced!")
+        # await tree.sync(guild=discord.Object(id=to_sync))
+        await interaction.response.edit_message(content = "Synced!")
     else:
-        await interaction.response.send_message("Insufficient permissions")
+        await interaction.response.edit_message(content = "Insufficient permissions")
 
 
 @tree.command(name = "schedule-image",description="Create an image with your schedule on it")
@@ -392,6 +401,41 @@ async def editSchedule(interaction: discord.Interaction):
         
     await interaction.response.send_message(view=Eribot_Views_Modals.ScheduleMenu(streamList,streamer,crudService),ephemeral=True)
 
+
+@tree.command(name = "send", description="Sends stored schedule to twitch")
+async def sendToTwitch(interaction: discord.Interaction):
+    if isAdmin(interaction.user):
+        guild = str(interaction.guild_id)
+
+        if not guild in guild_id_lookup:
+            
+            r = crudService.getStreamer(guild)
+            await addStreamerToGuildList(guild,r)
+
+        streamer = guild_id_lookup[guild]
+
+        token_data = crudService.get_token(streamer.streamer_id)
+
+        print(token_data)
+
+        if not token_data:
+            await get_user_token(interaction=interaction)
+
+
+
+        
+
+    else:
+        await interaction.response.send_message("No an admin, not allowed")
+
+
+async def get_user_token(interaction: discord.Interaction):
+    print
+    target_scopes = [AuthScope.CHANNEL_MANAGE_SCHEDULE]
+    auth_url = UserAuthenticator(twitch, target_scopes, force_verify=False).return_auth_url()
+    await interaction.response.send_message("Please authenticate your twitch account here: " + auth_url,ephemeral=True)
+    print("data")
+    pass
 
 @client.event
 async def on_message(message:discord.Message):
@@ -495,8 +539,10 @@ async def on_ready():
     twitch = await Twitch(os.environ.get("APP_ID"), os.environ.get("APP_SECRET"))
 
     # youtube = Client(api_key=Secrets.YOUTUBE_API_KEY)
+    client.loop.create_task(app.run_task())
 
-    if on_ready :
-        print("RUNNING")
+    print("RUNNING")
+
+
 
 client.run(DTOKEN)

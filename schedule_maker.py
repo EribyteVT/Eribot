@@ -7,7 +7,7 @@ import pytz
 import datetime
 
 
-crudService = CrudWrapper("DEV_REMOTE","")
+crudService = CrudWrapper("DEV_REMOTE","","")
 
 
 class Rectangle:

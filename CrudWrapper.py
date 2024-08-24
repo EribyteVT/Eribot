@@ -16,19 +16,19 @@ class Stream:
         return self.name +', '+ str(self.unixts)
 
 class CrudWrapper:
-    def __init__(self,env,password):
+    def __init__(self,env,password,token_password):
         self.env = env
         if(env == "PROD"):
             self.urlBase = 'http://10.111.131.62:46468'
 
         elif(env == "LOCAL"):
-            self.urlBase = 'http://127.0.0.1:8080'
+            self.urlBase = 'http://127.0.0.1:46468'
             
         elif(env == "DEV"):
-            self.urlBase = 'http://10.0.0.6:8080'
+            self.urlBase = 'http://10.0.0.6:46468'
 
         elif(env == "DEV_REMOTE"):
-            self.urlBase = 'http://crud.eribyte.net'
+            self.urlBase = 'https://crud.eribyte.net'
 
         elif (env == "K8S_TEST_DEPLOY"):
             self.urlBase = "http://10.111.131.62:46468"
@@ -37,6 +37,7 @@ class CrudWrapper:
             raise Exception("ERROR, ENV NOT SET")
         
         self.password = password
+        self.token_password = token_password
 
 
     def getLevelFromXp(self,xp):
@@ -390,6 +391,15 @@ class CrudWrapper:
     def editStream(self,timestamp,streamName,streamerId,newTimestamp,newStreamName):
         data = {"timestamp":int(timestamp), "streamName": streamName,"streamerId":streamerId,"newTimestamp":int(newTimestamp),"newName":newStreamName,"password":self.password}
         url = self.urlBase + '/editStream'
+        request = requests.post(url,json=data).text
+
+        return request
+    
+    ############################ TOKEN ######################################################################
+
+    def get_token(self,streamerID):
+        data = {"streamerId":streamerID, "password":self.token_password}
+        url = self.urlBase + '/token/getToken'
         request = requests.post(url,json=data).text
 
         return request
