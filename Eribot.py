@@ -402,7 +402,7 @@ async def sendToTwitch(interaction: discord.Interaction):
         return
     
 
-    streamer = await get_streamer_from_guild(interaction.guild.id)
+    streamer = await get_streamer_from_guild(interaction.guild.id,True)
 
 
     if(not streamer.twitch_id):
@@ -431,7 +431,7 @@ async def sendToTwitch(interaction: discord.Interaction):
 
     
 
-    streamList = crudService.getStreams(streamer.streamer_id,True)
+    streamList = crudService.getStreams(streamer.streamer_id)
 
     for stream in streamList:
         unixts = stream.unixts
