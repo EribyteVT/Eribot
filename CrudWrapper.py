@@ -16,24 +16,28 @@ class Stream:
         return self.name +', '+ str(self.unixts)
 
 class CrudWrapper:
-    def __init__(self,env,password):
+    def __init__(self,env,password,token_password):
         self.env = env
         if(env == "PROD"):
-            self.urlBase = 'http://10.0.0.6:8080'
+            self.urlBase = 'http://10.111.131.62:46468'
 
         elif(env == "LOCAL"):
-            self.urlBase = 'http://127.0.0.1:8080'
+            self.urlBase = 'http://127.0.0.1:46468'
             
         elif(env == "DEV"):
-            self.urlBase = 'http://10.0.0.6:8080'
+            self.urlBase = 'http://10.0.0.6:46468'
 
         elif(env == "DEV_REMOTE"):
-            self.urlBase = 'http://crud.eribyte.net'
+            self.urlBase = 'https://crud.eribyte.net'
+
+        elif (env == "K8S_TEST_DEPLOY"):
+            self.urlBase = "http://10.111.131.62:46468"
 
         else:
             raise Exception("ERROR, ENV NOT SET")
         
         self.password = password
+        self.token_password = token_password
 
 
     def getLevelFromXp(self,xp):
@@ -364,16 +368,6 @@ class CrudWrapper:
             streamList.append(streamObj)
 
         return streamList
-    
-    def getStreamer(self,guild_id):
-        url = self.urlBase + '/getStreamer/' + guild_id;
-        r = requests.get(url)
-
-        if r.status_code != 200 or r.text == "" or r.text == None:
-            print("Error")
-            return False
-
-        return r.json();
 
     ############################ EDIT AND DELETE #############################################################
 
@@ -390,6 +384,39 @@ class CrudWrapper:
         request = requests.post(url,json=data).text
 
         return request
+    
+    ############################ TOKEN ######################################################################
+
+    def get_token(self,streamerID):
+        data = {"twitchId":streamerID, "password":self.token_password}
+        url = self.urlBase + '/token/getToken'
+        request = requests.post(url,json=data)
+
+        try:
+            return request.json()
+        except:
+            return ""
+    
+    ########################### STREAMER ######################################################################
+    def getStreamer(self,guild_id):
+        url = self.urlBase + '/getStreamer/' + guild_id;
+        r = requests.get(url)
+
+        if r.status_code != 200 or r.text == "" or r.text == None:
+            print("Error")
+            return False
+
+        return r.json();
+
+    def addTwitchToStreamer(self,streamer_id,twitch_id):
+        url = self.urlBase + '/streamer/addTwitch';
+        data = {"streamerId":streamer_id,
+                "twitchId":twitch_id,
+                "password":self.password}
+        
+        r = requests.post(url,json=data)
+
+        return r.text
 
 
     
