@@ -416,13 +416,9 @@ async def sendToTwitch(interaction: discord.Interaction):
         return
         
 
-    print(token_data)
 
     refresh_token = encryptDecryptService.decrypt(token_data["refreshToken"],token_data["refreshSalt"])['decrypted']
     access_token = encryptDecryptService.decrypt(token_data["accessToken"],token_data["accessSalt"])['decrypted']
-
-    print(refresh_token)
-    print(access_token)
 
     target_scopes = [AuthScope.CHANNEL_MANAGE_SCHEDULE]
 
@@ -445,6 +441,8 @@ async def sendToTwitch(interaction: discord.Interaction):
     for stream in streamList:
         print("Adding stream")
         await twitch.create_channel_stream_schedule_segment(token_data['twitchId'],stream.unixts,pytz.utc._tzname,is_recurring=False,duration=180,title=stream.name)
+    
+    await interaction.response.send("Added to twitch probably, I dunno I dont really error check yet, check for urself and be a free thinker")
 
     
 
