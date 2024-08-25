@@ -404,6 +404,7 @@ async def sendToTwitch(interaction: discord.Interaction):
 
     streamer = await get_streamer_from_guild(interaction.guild.id)
 
+
     if(not streamer.twitch_id):
         await interaction.response.send_message("Error, please use /connect-guild-twitch to connect this guild to a streamer's twitch first")
         return
@@ -430,7 +431,7 @@ async def sendToTwitch(interaction: discord.Interaction):
 
     
 
-    streamList = crudService.getStreams(streamer.streamer_id)
+    streamList = crudService.getStreams(streamer.streamer_id,True)
 
     for stream in streamList:
         unixts = stream.unixts
@@ -563,10 +564,10 @@ async def addStreamerToGuildList(guild_id, sj):
     print("Cached Streamer")
 
 
-async def get_streamer_from_guild(guild) -> Streamer:
+async def get_streamer_from_guild(guild,force = False) -> Streamer:
     guild = str(guild)
 
-    if not guild in guild_id_lookup:
+    if (not guild in guild_id_lookup) or force :
         
         r = crudService.getStreamer(guild)
         await addStreamerToGuildList(guild,r)
