@@ -442,7 +442,7 @@ async def sendToTwitch(interaction: discord.Interaction):
         print("Adding stream")
         await twitch.create_channel_stream_schedule_segment(token_data['twitchId'],stream.unixts,pytz.utc._tzname,is_recurring=False,duration=180,title=stream.name)
     
-    await interaction.response.send("Added to twitch probably, I dunno I dont really error check yet, check for urself and be a free thinker")
+    await interaction.response.send_message("Added to twitch probably, I dunno I dont really error check yet, check for urself and be a free thinker")
 
     
 
