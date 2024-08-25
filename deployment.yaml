@@ -48,6 +48,11 @@ spec:
                 secretKeyRef:
                   name: eribot-secrets
                   key: ENDPOINT_PASSWORD
+            - name: CRUD_OAUTH_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: eribot-secrets
+                  key: CRUD_OAUTH_PASSWORD
                   
   selector:
     matchLabels:
