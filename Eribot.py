@@ -22,23 +22,10 @@ from typing import Optional, Union
 import traceback
 from schedule_maker import make_schedule
 from EncryptDecryptWrapper import EncryptDecryptWrapper
+from Classes import Stream, Streamer
 
-class Streamer:
-    def __init__(self,streamer_id,streamer_name,timezone,guild,level_system,level_ping_role,level_channel,twitch_id):
-        self.streamer_id = str(streamer_id)
-        self.streamer_name = str(streamer_name)
-        self.timezone = str(timezone)
-        self.guild = str(guild)
-        self.level_system = str(level_system)
-        self.level_ping_role = str(level_ping_role)
-        self.level_channel_id = str(level_channel)
-        self.level_channel = None
-        self.twitch_id = twitch_id
-
-    def setLevelChannel(self,level_channel):
-        self.level_channel = level_channel
     
-
+# TODO: move to proper file
 class ConfirmationMenu(discord.ui.View):
     def __init__(self,discord_id,twitch_id):
         super().__init__()
@@ -70,14 +57,6 @@ class ConfirmationMenu(discord.ui.View):
         self.value = False
         self.stop()
         
-class Stream:
-    def __init__(self, unixts, name):
-        self.unixts = unixts
-        self.name = name
-    def __lt__(self, other):
-        return self.unixts < other.unixts
-    def __str__(self):
-        return self.name +', '+ str(self.unixts)
 
 
 comments = [ "You go, girl!", "Are you fucking kidding me? HELL yeah!", "Great job!", "I love it!", "Amazing work!", "Well done!", "Impressive!", "Fantastic!", "You nailed it!", "Awesome!", "Brilliant!", "Keep it up!" ] 
@@ -303,13 +282,17 @@ async def addEvents(interaction: discord.Interaction):
     streamList.sort()
     try:
         for stream in streamList:
-            await interaction.guild.create_scheduled_event(name = stream.name[:100], 
-                                                            description="Watch me live on twitch! :D", 
-                                                            start_time=stream.unixts, 
-                                                            end_time=stream.unixts + datetime.timedelta(hours=2),
-                                                            location="https://twitch.tv/"+streamer.streamer_name,
-                                                            entity_type=discord.EntityType.external,
-                                                            privacy_level=discord.PrivacyLevel.guild_only)
+            if(not stream.event_id):
+                event = await interaction.guild.create_scheduled_event(name = stream.name[:100], 
+                                                                description="Watch me live on twitch! :D", 
+                                                                start_time=stream.unixts, 
+                                                                end_time=stream.unixts + datetime.timedelta(hours=2),
+                                                                location="https://twitch.tv/"+streamer.streamer_name,
+                                                                entity_type=discord.EntityType.external,
+                                                                privacy_level=discord.PrivacyLevel.guild_only)
+                id = event.id
+
+                crudService.addServiceIdToStream(stream.stream_id,"discord",None,id)
             
         await interaction.response.send_message("Events added!")
 
@@ -320,24 +303,29 @@ async def addEvents(interaction: discord.Interaction):
 @tree.command(name = "sync", description="Syncs the tree (admin only)")
 async def sync(interaction: discord.Interaction, guild_id_to_sync: Optional[str]):
     await interaction.response.defer(thinking=True)
-    list = await tree.sync()
-    for item in list:
-        print(item)
-    # print(list)
     if(isAdmin(interaction.user)):
-        if(guild_id_to_sync != None):
-            to_sync = guild_id_to_sync
+        if(guild_id_to_sync == "ALL"):
+            commands = await tree.sync()
+
+        elif(guild_id_to_sync != None):
+            commands = await tree.sync(guild=discord.Object(id=guild_id_to_sync))
+
         else:
-            to_sync = interaction.guild.id
+            commands = await tree.sync(guild=interaction.guild)
+
+        message = ""
+
+        for command in commands:
+            message += command.name +"\n"
         
-        # await tree.sync(guild=discord.Object(id=to_sync))
-        await interaction.response.edit_message(content = "Synced!")
+        await interaction.followup.send(content = "Synced the following commands:\n"+message)
     else:
-        await interaction.response.edit_message(content = "Insufficient permissions")
+        await interaction.followup.send(content = "Insufficient permissions")
 
 
 @tree.command(name = "schedule-image",description="Create an image with your schedule on it")
 async def scheduleImage(interaction: discord.Interaction):
+    await interaction.response.defer(thinking=True)
 
     guild = str(interaction.guild_id)
 
@@ -345,7 +333,7 @@ async def scheduleImage(interaction: discord.Interaction):
         
         r = crudService.getStreamer(guild)
         if r == False:
-            await interaction.response.send_message("Failed to get streamer from Database")
+            await interaction.followup.send(content="Failed to get streamer from Database")
             return
         await addStreamerToGuildList(guild,r)
 
@@ -370,7 +358,7 @@ async def scheduleImage(interaction: discord.Interaction):
     else:
         base_path += 'default/'
         
-    await interaction.response.send_message(file = discord.File(base_path+"schedule.png"))
+    await interaction.followup.send(file = discord.File(base_path+"schedule.png"))
 
 
 @tree.command(name = "edit-schedule",description="edit schedule")
@@ -392,21 +380,22 @@ async def editSchedule(interaction: discord.Interaction):
 
     streamList.sort()
         
-    await interaction.response.send_message(view=Eribot_Views_Modals.ScheduleMenu(streamList,streamer,crudService),ephemeral=True)
+    await interaction.response.send_message(view=Eribot_Views_Modals.ScheduleMenu(streamList,streamer,crudService,interaction,twitch,encryptDecryptService),ephemeral=True)
 
 
-@tree.command(name = "send", description="Sends stored schedule to twitch")
+@tree.command(name = "send-schedule-to-twitch", description="Sends stored schedule to twitch")
 async def sendToTwitch(interaction: discord.Interaction):
+    await interaction.response.defer(thinking=True)
     if not isAdmin(interaction.user):
-        interaction.response.send_message("Error, you are not an admin and not allowed to use this command")
+        interaction.followup.send(content="Error, you are not an admin and not allowed to use this command")
         return
-    
+
 
     streamer = await get_streamer_from_guild(interaction.guild.id,True)
 
 
     if(not streamer.twitch_id):
-        await interaction.response.send_message("Error, please use /connect-guild-twitch to connect this guild to a streamer's twitch first")
+        await interaction.followup.send(content="Error, please use /connect-guild-twitch to connect this guild to a streamer's twitch first")
         return
 
     token_data = crudService.get_token(streamer.twitch_id)
@@ -422,7 +411,11 @@ async def sendToTwitch(interaction: discord.Interaction):
 
     target_scopes = [AuthScope.CHANNEL_MANAGE_SCHEDULE]
 
-    await twitch.set_user_authentication(access_token,target_scopes,refresh_token)
+    try:
+        await twitch.set_user_authentication(access_token,target_scopes,refresh_token)
+    except InvalidRefreshTokenException:
+        await get_user_token(interaction,streamer.streamer_id)
+        return
 
 
     
@@ -436,13 +429,25 @@ async def sendToTwitch(interaction: discord.Interaction):
 
     streamList.sort()
 
-    print("here")
-
+    bad_list = []
     for stream in streamList:
-        print("Adding stream")
-        await twitch.create_channel_stream_schedule_segment(token_data['twitchId'],stream.unixts,pytz.utc._tzname,is_recurring=False,duration=180,title=stream.name)
+        try:
+            if(not stream.twitch_id):
+                response = await twitch.create_channel_stream_schedule_segment(token_data['twitchId'],stream.unixts,pytz.utc._tzname,is_recurring=False,duration=180,title=stream.name)
+                id = response.segments[0].id
+                crudService.addServiceIdToStream(stream.stream_id,"twitch",id,None)
+        except:
+            bad_list.append(stream.name)
     
-    await interaction.response.send_message("Added to twitch probably, I dunno I dont really error check yet, check for urself and be a free thinker")
+    if(bad_list == []):
+        await interaction.followup.send(content="Sent Schedule to twitch")
+    else:
+        message = ""
+        for stream in bad_list:
+            message += stream +'\n'
+        await interaction.followup.send(content = "unable to add the following streams:\n"+message)
+        
+
 
     
 
@@ -477,7 +482,7 @@ async def connectTwitch(interaction: discord.Interaction,username:str):
 async def get_user_token(interaction: discord.Interaction, streamer_id: int):
     target_scopes = [AuthScope.CHANNEL_MANAGE_SCHEDULE]
     auth_url = UserAuthenticator(twitch, target_scopes, force_verify=False,url="https://auth.eribyte.net/").return_auth_url()
-    await interaction.response.send_message("Please authenticate your twitch account here first, once authenticated run this command again: " + auth_url,ephemeral=True)
+    await interaction.followup.send(content="Please authenticate your twitch account here first, once authenticated run this command again: " + auth_url,ephemeral=True)
 
 
 @client.event

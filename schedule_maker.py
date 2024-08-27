@@ -352,8 +352,8 @@ def make_schedule(streamer,streams):
             
             if month == stream_month and day == stream_day:
                 stream_data = stream.name
-                stream_time = stream.unixts.astimezone(pytz.timezone("America/Chicago")).time().strftime("%I:%M %p")
-                time_zone = pytz.timezone("America/Chicago").tzname(stream.unixts)
+                stream_time = stream.unixts.astimezone(pytz.timezone(streamer.timezone)).time().strftime("%I:%M %p")
+                time_zone = pytz.timezone(streamer.timezone).tzname(stream.unixts)
 
         if stream_data == "":
             stream_data = "N/A"
@@ -416,7 +416,7 @@ def make_schedule(streamer,streams):
             
             if month == stream_month and day == stream_day:
                 stream_data = stream.name
-                stream_time = stream.unixts.astimezone(pytz.timezone("America/Chicago")).time().strftime("%I:%M %p")
+                stream_time = stream.unixts.astimezone(pytz.timezone(streamer.timezone)).time().strftime("%I:%M %p")
                 time_zone = pytz.timezone(streamer.timezone).tzname(stream.unixts)
 
         if stream_data == "":

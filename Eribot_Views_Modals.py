@@ -3,6 +3,11 @@ import datetime
 import pytz
 import json
 import CrudWrapper
+from Classes import Stream,Streamer
+from twitchAPI.twitch import Twitch
+from twitchAPI.type import AuthScope
+import EncryptDecryptWrapper
+
 
 class StreamInfo:
     def __init__(self, unixts,name,streamer_id):
@@ -14,23 +19,28 @@ class StreamInfo:
 
 
 class ScheduleMenu(discord.ui.View):
-    def __init__(self,streamList,streamer,crudService):
+    def __init__(self,streamList: list[Stream],streamer:Streamer,crudService:CrudWrapper.CrudWrapper, interaction:discord.Interaction, twitch:Twitch,encryptDecryptService:EncryptDecryptWrapper):
         super().__init__()
         self.streamList = streamList
         self.streamer = streamer
         self.crudService = crudService
+        self.interaction = interaction
+        self.twitch = twitch
+        self.encryptDecryptService = encryptDecryptService
 
         self.stream = None
 
+        self.streamList = streamList
+
         for stream in streamList:
-            stream_info = StreamInfo(stream.unixts,stream.name,streamer.streamer_id)
             stream_time = datetime.datetime.fromtimestamp(stream.unixts).astimezone(pytz.timezone(streamer.timezone))
 
             stream_time_str = stream_time.strftime("%d/%m/%Y, %H:%M:%S")
 
-            button = discord.ui.Button(label = stream_time_str + " " + stream.name,custom_id=str(stream_info))
+            button = discord.ui.Button(label = stream_time_str + " " + stream.name, custom_id=str(stream.stream_id))
             button.callback = self.handleClick
             self.add_button(button)
+    
     def add_button(self,button):
         self.add_item(button)
 
@@ -41,11 +51,16 @@ class ScheduleMenu(discord.ui.View):
         self.clear()
         self.next()
 
-        self.stream = json.loads(interaction.data["custom_id"])
+        for stream in self.streamList:
+            print(stream)
+            if(str(stream.stream_id) == interaction.data["custom_id"]):
+                self.stream = stream 
+                continue
 
-        await interaction.response.edit_message(content=f"{self.stream['name']} - <t:{str(self.stream['unixts']).split('.')[0]}>", view=self)
+        print(self.stream)
+
+        await interaction.response.edit_message(content=f"{self.stream.name} - <t:{str(self.stream.unixts).split('.')[0]}>", view=self)
         
-        print("click")
 
     def next(self):
 
@@ -67,25 +82,59 @@ class ScheduleMenu(discord.ui.View):
     async def editNameCallback(self,interaction:discord.Interaction):
         self.clear() 
 
-        modal = StreamNameModal(self.stream,self.crudService)
+        modal = StreamNameModal(self.stream,self.crudService,self.streamer,self.interaction,self.twitch,self.encryptDecryptService)
         await interaction.response.send_modal(modal)
 
 
     async def editTimeCallback(self,interaction:discord.Interaction):
         self.clear() 
 
-        modal = StreamTimeModal(self.stream,self.crudService)
+        modal = StreamTimeModal(self.stream,self.crudService,self.streamer,self.interaction,self.twitch,self.encryptDecryptService)
         await interaction.response.send_modal(modal)
 
     async def deleteCallback(self,interaction:discord.Interaction):
-        self.crudService.deleteStream(self.stream["unixts"],self.stream["name"],self.stream["streamer_id"])
-        await interaction.response.edit_message(content = "Deleted Stream!",view = None)
+        await interaction.response.defer(thinking=True)
+        message = ""
+
+        if(self.stream.event_id):
+            try:
+                event = await interaction.guild.fetch_scheduled_event(self.stream.event_id)
+                await event.cancel()
+            except:
+                message = "Error deleting discord event\n"
+        if(self.stream.twitch_id):
+            try:
+                token_data = self.crudService.get_token(self.streamer.twitch_id)
+                    
+
+
+                refresh_token = self.encryptDecryptService.decrypt(token_data["refreshToken"],token_data["refreshSalt"])['decrypted']
+                access_token = self.encryptDecryptService.decrypt(token_data["accessToken"],token_data["accessSalt"])['decrypted']
+
+                target_scopes = [AuthScope.CHANNEL_MANAGE_SCHEDULE]
+
+                await self.twitch.set_user_authentication(access_token,target_scopes,refresh_token)
+
+                print(self.stream.twitch_id)
+
+                await self.twitch.delete_channel_stream_schedule_segment(self.streamer.twitch_id,self.stream.twitch_id)
+            except:
+                message += 'Error deleting twitch event\n'
+        self.crudService.deleteStream(self.stream.stream_id)
+
+        if(message == ""):
+            message = "Deleted Stream!"
+        await interaction.followup.send(content = message,ephemeral=True)
+
 
     
 
 class StreamNameModal(discord.ui.Modal,title="New Stream Name"):
-    def __init__(self,stream,crudService):
+    def __init__(self,stream:Stream,crudService:CrudWrapper.CrudWrapper,streamer:Streamer, interaction:discord.Interaction, twitch:Twitch,encryptDecryptService:EncryptDecryptWrapper):
         super().__init__()
+        self.streamer = streamer
+        self.twitch = twitch 
+        self.encryptDecryptService = encryptDecryptService
 
         self.custom_id = "MODAL"
 
@@ -98,16 +147,51 @@ class StreamNameModal(discord.ui.Modal,title="New Stream Name"):
         self.on_submit = self.name_callback
     
     async def name_callback(self,interaction:discord.Interaction):
+        await interaction.response.defer(thinking=True,ephemeral=True)
         new_name = interaction.data["components"][0]["components"][0]["value"]
 
-        self.crudService.editStream(self.stream["unixts"],self.stream["name"],self.stream["streamer_id"],self.stream["unixts"],new_name)
 
-        await interaction.response.send_message("Changed!")
+        message = ""
+
+        if(self.stream.event_id):
+            try:
+                event = await interaction.guild.fetch_scheduled_event(self.stream.event_id)
+                await event.edit(name=new_name)
+            except:
+                message = "Error with discord event\n"
+
+        if(self.stream.twitch_id):
+            try:
+                token_data = self.crudService.get_token(self.streamer.twitch_id)
+
+                refresh_token = self.encryptDecryptService.decrypt(token_data["refreshToken"],token_data["refreshSalt"])['decrypted']
+                access_token = self.encryptDecryptService.decrypt(token_data["accessToken"],token_data["accessSalt"])['decrypted']
+
+                target_scopes = [AuthScope.CHANNEL_MANAGE_SCHEDULE]
+
+                await self.twitch.set_user_authentication(access_token,target_scopes,refresh_token)
+
+                print(self.stream.twitch_id)
+
+                await self.twitch.update_channel_stream_schedule_segment(self.streamer.twitch_id,self.stream.twitch_id,title=new_name)
+            except:
+                message += 'Error deleting twitch event\n'
+
+        
+        if(message == ""):
+            message = "Name updated!"
+
+        self.crudService.editStream(self.stream.stream_id,"name",self.stream.unixts,new_name)
+
+        await interaction.followup.send(content=message,ephemeral=True)
         
 
 class StreamTimeModal(discord.ui.Modal,title="New Stream Time"):
-    def __init__(self,stream,crudService):
+    def __init__(self,stream:Stream,crudService:CrudWrapper.CrudWrapper,streamer:Streamer, interaction:discord.Interaction, twitch:Twitch,encryptDecryptService:EncryptDecryptWrapper):
         super().__init__()
+        self.streamer = streamer
+        self.twitch = twitch 
+        self.encryptDecryptService = encryptDecryptService
 
         self.custom_id = "MODAL"
 
@@ -120,11 +204,49 @@ class StreamTimeModal(discord.ui.Modal,title="New Stream Time"):
         self.on_submit = self.name_callback
     
     async def name_callback(self,interaction:discord.Interaction):
+        await interaction.response.defer(thinking=True, ephemeral=True)
         new_time = interaction.data["components"][0]["components"][0]["value"]
 
-        self.crudService.editStream(self.stream["unixts"],self.stream["name"],self.stream["streamer_id"],new_time,self.stream["name"])
+        new_time_datetime = datetime.datetime.fromtimestamp(float(new_time)).astimezone(pytz.timezone(self.streamer.timezone))
 
-        await interaction.response.send_message("Changed!")
+        print(new_time_datetime)
+        new_endtime = new_time_datetime + datetime.timedelta(hours=2)
+
+        message = ""
+
+        if(self.stream.event_id):
+            try:
+                event = await interaction.guild.fetch_scheduled_event(self.stream.event_id)
+                await event.edit(start_time=new_time_datetime,end_time=new_endtime)
+            except:
+                message = "Error with discord event\n"
+
+        if(self.stream.twitch_id):
+            try:
+                token_data = self.crudService.get_token(self.streamer.twitch_id)
+                    
+
+
+                refresh_token = self.encryptDecryptService.decrypt(token_data["refreshToken"],token_data["refreshSalt"])['decrypted']
+                access_token = self.encryptDecryptService.decrypt(token_data["accessToken"],token_data["accessSalt"])['decrypted']
+
+                target_scopes = [AuthScope.CHANNEL_MANAGE_SCHEDULE]
+
+                await self.twitch.set_user_authentication(access_token,target_scopes,refresh_token)
+
+                print(self.stream.twitch_id)
+
+                await self.twitch.update_channel_stream_schedule_segment(self.streamer.twitch_id,self.stream.twitch_id,start_time=new_time_datetime)
+            except:
+                message += 'Error deleting twitch event\n'
+
+        
+        if(message == ""):
+            message = "Time updated!"
+
+        self.crudService.editStream(self.stream.stream_id,"time",new_time,self.stream.name)
+
+        await interaction.followup.send(content = message, ephemeral=True)
 
 class GuildConnect(discord.ui.View):
     def __init__(self,streamer_id,twitch_id,crudService:CrudWrapper.CrudWrapper):

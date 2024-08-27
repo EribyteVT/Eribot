@@ -5,15 +5,8 @@ import random
 import datetime
 import re 
 import pytz 
+from Classes import Stream,Streamer
 
-class Stream:
-    def __init__(self, unixts, name):
-        self.unixts = unixts
-        self.name = name
-    def __lt__(self, other):
-        return self.unixts < other.unixts
-    def __str__(self):
-        return self.name +', '+ str(self.unixts)
 
 class CrudWrapper:
     def __init__(self,env,password,token_password):
@@ -342,7 +335,7 @@ class CrudWrapper:
 
         return request
     
-    def getStreams(self,streamerId):
+    def getStreams(self,streamerId) -> list[Stream]:
         currentTime = str(time.time())[:-4]
         currentTime = ''.join(currentTime.split('.'))
 
@@ -362,24 +355,43 @@ class CrudWrapper:
         streamList = []
 
         for stream in streamButFunky:
-            unixts = parse_timestamp(stream["streamTableEntityKey"]['streamDate'][:-5])
+            unixts = parse_timestamp(stream['streamDate'][:-5])
             unixts = datetime.datetime.timestamp(unixts)
-            streamObj = Stream(unixts,stream['streamName'])
+            streamObj = Stream(stream['streamId'],unixts,stream['streamerId'],stream['streamName'],stream['eventId'],stream['twitchSegmentId'],stream['duration'],stream['categoryId'])
             streamList.append(streamObj)
 
         return streamList
+    
+    def addServiceIdToStream(self,streamerId,serviceName,twitchId,discordId):
+        
+
+        url = self.urlBase + '/stream/addOtherId'
+
+
+
+        data = {"streamId":streamerId,
+                "serviceName":serviceName,
+                "twitchStreamId":twitchId,
+                "discordEventId":discordId,
+                "password":self.password}
+        
+        print(data)
+
+        r = requests.post(url, json=data)
+
+        return r
 
     ############################ EDIT AND DELETE #############################################################
 
-    def deleteStream(self,timestamp,streamName,streamerId):
-        data = {"timestamp":int(timestamp), "streamName": streamName,"streamerId":streamerId,"password":self.password}
+    def deleteStream(self,stream_id):
+        data = {"streamId":stream_id,"password":self.password}
         url = self.urlBase + '/deleteStream'
         request = requests.post(url,json=data).text
 
         return request
 
-    def editStream(self,timestamp,streamName,streamerId,newTimestamp,newStreamName):
-        data = {"timestamp":int(timestamp), "streamName": streamName,"streamerId":streamerId,"newTimestamp":int(newTimestamp),"newName":newStreamName,"password":self.password}
+    def editStream(self,stream_id,which,newTimestamp,newStreamName):
+        data = {"streamId":stream_id, "which":which, "newTimestamp":int(newTimestamp),"newName":newStreamName,"password":self.password}
         url = self.urlBase + '/editStream'
         request = requests.post(url,json=data).text
 
