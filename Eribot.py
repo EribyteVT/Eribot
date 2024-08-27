@@ -308,9 +308,11 @@ async def sync(interaction: discord.Interaction, guild_id_to_sync: Optional[str]
             commands = await tree.sync()
 
         elif(guild_id_to_sync != None):
+            tree.copy_global_to(guild=guild_id_to_sync)
             commands = await tree.sync(guild=discord.Object(id=guild_id_to_sync))
 
         else:
+            tree.copy_global_to(guild=interaction.guild)
             commands = await tree.sync(guild=interaction.guild)
 
         message = ""
