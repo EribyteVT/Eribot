@@ -67,7 +67,7 @@ intents = discord.Intents.all()
 client = discord.Client(intents = intents)
 tree = app_commands.CommandTree(client)
 
-env = "PROD"
+env = "LOCAL"
 
 crudService = CrudWrapper(env,os.environ.get("CRUD_PASSWORD"), os.environ.get("CRUD_OAUTH_PASSWORD"))
 encryptDecryptService = EncryptDecryptWrapper(env,os.environ.get("ENDPOINT_PASSWORD"))
@@ -111,18 +111,11 @@ async def compliment(interaction: discord.Interaction):
 @tree.command(name = "schedule",description="get the schedule for the next week")
 async def schedule(interaction: discord.Interaction):
 
-    guild = str(interaction.guild_id)
-
-    if not guild in guild_id_lookup:
-        r = crudService.getStreamer(guild)
-        if r == False:
-            await interaction.response.send_message("Failed to get streamer from Database")
-            return
-        await addStreamerToGuildList(guild,r)
-
-    streamer = guild_id_lookup[guild]
+    streamer = await get_streamer_from_guild(interaction.guild_id)
 
     streamList = crudService.getStreams(streamer.streamer_id)
+
+    print(streamList)
 
     if len(streamList) == 0:
         await interaction.response.send_message("No Streams in the next week.")
@@ -142,16 +135,7 @@ async def schedule(interaction: discord.Interaction):
 
 @tree.command(name = "next-stream",description="get the next stream")
 async def nextStream(interaction: discord.Interaction):
-    guild = str(interaction.guild_id)
-
-    if not guild in guild_id_lookup:
-        r = crudService.getStreamer(guild)
-        if r == False:
-            await interaction.response.send_message("Failed to get streamer from Database")
-            return
-        await addStreamerToGuildList(guild,r)
-
-    streamer = guild_id_lookup[guild]
+    streamer = await get_streamer_from_guild(interaction.guild_id)
 
     streamList = crudService.getStreams(streamer.streamer_id)
 
@@ -207,7 +191,6 @@ async def getLevel(interaction: discord.Interaction):
     #send
     await interaction.response.send_message(message)
 
-
 @tree.command(name = "connect-twitch",description="connect your twitch and discord account for more XP!")
 async def connectTwitch(interaction: discord.Interaction, username:str):
 
@@ -235,21 +218,22 @@ async def connectTwitch(interaction: discord.Interaction, username:str):
 @tree.command(name = "add-stream", description="Add a stream to the database")
 async def addStream(interaction: discord.Interaction, timestamp: str, stream_name: str):
     if isAdmin(interaction.user):
-        guild = str(interaction.guild_id)
+        streamer = await get_streamer_from_guild(interaction.guild_id)
 
-        if not guild in guild_id_lookup:
-            
-            r = crudService.getStreamer(guild)
-            await addStreamerToGuildList(guild,r)
+        stream = crudService.addStream(timestamp,stream_name,streamer.streamer_id)
+        
+        print(stream)
 
-        streamer = guild_id_lookup[guild]
+        unixts = stream.unixts
+        datetime_obj = datetime.datetime.fromtimestamp(unixts).astimezone(pytz.timezone(streamer.timezone))
+        stream.unixts = datetime_obj
 
-        response = crudService.addStream(timestamp,stream_name,streamer.streamer_id)
-
-        if response == "False":
-            await interaction.response.send_message("Error, invalid timestamp")
-            return
         await interaction.response.send_message("That probabaly worked :D")
+
+        if(streamer.auto_discord_event == 'Y'):
+            await addEvent(stream, interaction, streamer)
+
+
     else:
         await interaction.response.send_message("HEY LOSER MC DORK FACE, NICE TRY BUT UR NOT ***ALLOWED***")
 
@@ -260,17 +244,7 @@ async def addEvents(interaction: discord.Interaction):
         return
 
 
-    guild = str(interaction.guild_id)
-
-    if not guild in guild_id_lookup:
-        
-        r = crudService.getStreamer(guild)
-        if r == False:
-            await interaction.response.send_message("Failed to get streamer from Database")
-            return
-        await addStreamerToGuildList(guild,r)
-
-    streamer = guild_id_lookup[guild]
+    streamer = await get_streamer_from_guild(interaction.guild_id)
 
     streamList = crudService.getStreams(streamer.streamer_id)
 
@@ -282,23 +256,29 @@ async def addEvents(interaction: discord.Interaction):
     streamList.sort()
     try:
         for stream in streamList:
-            if(not stream.event_id):
-                event = await interaction.guild.create_scheduled_event(name = stream.name[:100], 
-                                                                description="Watch me live on twitch! :D", 
-                                                                start_time=stream.unixts, 
-                                                                end_time=stream.unixts + datetime.timedelta(hours=2),
-                                                                location="https://twitch.tv/"+streamer.streamer_name,
-                                                                entity_type=discord.EntityType.external,
-                                                                privacy_level=discord.PrivacyLevel.guild_only)
-                id = event.id
-
-                crudService.addServiceIdToStream(stream.stream_id,"discord",None,id)
+            await addEvent(stream, interaction, streamer)
             
         await interaction.response.send_message("Events added!")
 
     except Exception as err:
         print(traceback.format_exc())
         await interaction.response.send_message("An error has occured")
+
+async def addEvent(stream: Stream,interaction:discord.Interaction,streamer:Streamer):
+    if(not stream.event_id):
+        event = await interaction.guild.create_scheduled_event(name = stream.name[:100], 
+                                                        description="Watch me live on twitch! :D", 
+                                                        start_time=stream.unixts, 
+                                                        end_time=stream.unixts + datetime.timedelta(hours=2),
+                                                        location="https://twitch.tv/"+streamer.streamer_name,
+                                                        entity_type=discord.EntityType.external,
+                                                        privacy_level=discord.PrivacyLevel.guild_only)
+        id = event.id
+
+        crudService.addServiceIdToStream(stream.stream_id,"discord",None,id)
+
+async def addTwitchSchedule():
+    pass
 
 @tree.command(name = "sync", description="Syncs the tree (admin only)")
 async def sync(interaction: discord.Interaction, guild_id_to_sync: Optional[str]):
@@ -329,17 +309,7 @@ async def sync(interaction: discord.Interaction, guild_id_to_sync: Optional[str]
 async def scheduleImage(interaction: discord.Interaction):
     await interaction.response.defer(thinking=True)
 
-    guild = str(interaction.guild_id)
-
-    if not guild in guild_id_lookup:
-        
-        r = crudService.getStreamer(guild)
-        if r == False:
-            await interaction.followup.send(content="Failed to get streamer from Database")
-            return
-        await addStreamerToGuildList(guild,r)
-
-    streamer = guild_id_lookup[guild]
+    streamer = await get_streamer_from_guild(interaction.guild_id)
 
     streamList = crudService.getStreams(streamer.streamer_id)
 
@@ -369,14 +339,7 @@ async def editSchedule(interaction: discord.Interaction):
         await interaction.response.send_message("HEY LOSER MC DORK FACE, NICE TRY BUT UR NOT ***ALLOWED***")
         return
 
-    guild = str(interaction.guild_id)
-
-    if not guild in guild_id_lookup:
-        
-        r = crudService.getStreamer(guild)
-        await addStreamerToGuildList(guild,r)
-
-    streamer = guild_id_lookup[guild]
+    streamer = await get_streamer_from_guild(interaction.guild_id)
 
     streamList = crudService.getStreams(streamer.streamer_id)
 
@@ -476,10 +439,6 @@ async def connectTwitch(interaction: discord.Interaction,username:str):
 
     await interaction.response.send_message("# this you? ',:^)",embed=embed, ephemeral=True,view=buttonMenu)
 
-    
-
-    
-
 
 async def get_user_token(interaction: discord.Interaction, streamer_id: int):
     target_scopes = [AuthScope.CHANNEL_MANAGE_SCHEDULE]
@@ -493,14 +452,7 @@ async def on_message(message:discord.Message):
     if message.author == client.user:
         return 
     
-    guild = str(message.guild.id)
-
-    if not guild in guild_id_lookup:
-        
-        r = crudService.getStreamer(guild)
-        await addStreamerToGuildList(guild,r)
-
-    streamer = guild_id_lookup[guild]
+    streamer = await get_streamer_from_guild(message.guild.id)
 
     if streamer.level_system != "Y":
         return
@@ -556,17 +508,6 @@ async def add_xp_handler(id,xp_to_add, update, member, streamer):
         else:
             await streamer.level_channel.send(f"Congrats {member.display_name} for reaching level {levelAfter}!!!")
 
-async def addStreamerToGuildList(guild_id, sj):
-    streamer = Streamer(sj["streamerId"],sj["streamerName"],sj["timezone"],sj["guild"],sj["levelSystem"],sj["levelPingRole"],sj["levelChannel"], sj['twitchId'])
-    
-    if(streamer.level_system == "Y"):
-        level_channel =  await client.fetch_channel(streamer.level_channel_id)
-        streamer.setLevelChannel(level_channel)
-
-
-    guild_id_lookup[guild_id] = streamer
-
-    print("Cached Streamer")
 
 
 async def get_streamer_from_guild(guild,force = False) -> Streamer:
@@ -574,8 +515,14 @@ async def get_streamer_from_guild(guild,force = False) -> Streamer:
 
     if (not guild in guild_id_lookup) or force :
         
-        r = crudService.getStreamer(guild)
-        await addStreamerToGuildList(guild,r)
+        streamer = crudService.getStreamer(guild)
+
+        if(streamer.level_system == "Y"):
+            level_channel =  await client.fetch_channel(streamer.level_channel_id)
+            streamer.setLevelChannel(level_channel)
+
+        guild_id_lookup[guild] = streamer
+
 
     streamer = guild_id_lookup[guild]
 

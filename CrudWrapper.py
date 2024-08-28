@@ -331,9 +331,14 @@ class CrudWrapper:
     def addStream(self,timestamp,streamName,streamerId):
         data = {"timestamp":timestamp, "streamName": streamName,"streamerId":streamerId,"password":self.password}
         url = self.urlBase + '/AddStreamTable'
-        request = requests.post(url,json=data).text
+        request = requests.post(url,json=data).json()
 
-        return request
+        print(type(request))
+
+        if(request['response'] != "OKAY"):
+            return request['response']
+
+        return constructStream(request['data'])
     
     def getStreams(self,streamerId) -> list[Stream]:
         currentTime = str(time.time())[:-4]
@@ -344,58 +349,57 @@ class CrudWrapper:
 
         url = self.urlBase + '/getStreams/' + streamerId + "/" + currentTime
 
-        r = requests.get(url)
+        r = requests.get(url).json()
 
-        if r.status_code != 200:
-            print("Error")
-            return False
+        if r['response'] != "OKAY":
+            return r['response']
 
-        streamButFunky = r.json()
+        streamButFunky = r['data']
 
         streamList = []
 
         for stream in streamButFunky:
-            unixts = parse_timestamp(stream['streamDate'][:-5])
-            unixts = datetime.datetime.timestamp(unixts)
-            streamObj = Stream(stream['streamId'],unixts,stream['streamerId'],stream['streamName'],stream['eventId'],stream['twitchSegmentId'],stream['duration'],stream['categoryId'])
+            streamObj = constructStream(stream)
             streamList.append(streamObj)
 
         return streamList
     
     def addServiceIdToStream(self,streamerId,serviceName,twitchId,discordId):
-        
-
         url = self.urlBase + '/stream/addOtherId'
-
-
 
         data = {"streamId":streamerId,
                 "serviceName":serviceName,
                 "twitchStreamId":twitchId,
                 "discordEventId":discordId,
                 "password":self.password}
-        
-        print(data)
 
-        r = requests.post(url, json=data)
+        r = requests.post(url, json=data).json()
 
-        return r
+        if(r['response'] != 'OKAY'):
+            return r['response']
+
+        return r['data']
 
     ############################ EDIT AND DELETE #############################################################
 
     def deleteStream(self,stream_id):
         data = {"streamId":stream_id,"password":self.password}
         url = self.urlBase + '/deleteStream'
-        request = requests.post(url,json=data).text
+        request = requests.post(url,json=data).json()
 
-        return request
+        
+
+        return request['response']
 
     def editStream(self,stream_id,which,newTimestamp,newStreamName):
         data = {"streamId":stream_id, "which":which, "newTimestamp":int(newTimestamp),"newName":newStreamName,"password":self.password}
         url = self.urlBase + '/editStream'
-        request = requests.post(url,json=data).text
+        request = requests.post(url,json=data).json()
 
-        return request
+        if(request['response'] != 'OKAY'):
+            return request['response']
+
+        return constructStream(request['data'])
     
     ############################ TOKEN ######################################################################
 
@@ -404,33 +408,52 @@ class CrudWrapper:
         url = self.urlBase + '/token/getToken'
         request = requests.post(url,json=data)
 
-        try:
-            return request.json()
-        except:
-            return ""
+        if(request['response'] != 'OKAY'):
+            return request['response']
+
+        return request['data']
     
     ########################### STREAMER ######################################################################
     def getStreamer(self,guild_id):
         url = self.urlBase + '/getStreamer/' + guild_id;
-        r = requests.get(url)
+        r = requests.get(url).json()
 
-        if r.status_code != 200 or r.text == "" or r.text == None:
-            print("Error")
-            return False
+        if(r['response'] != 'OKAY'):
+            return r['response']
 
-        return r.json();
+        
+        streamer_json = r['data']
 
+        streamer = Streamer(streamer_json["streamerId"],streamer_json["streamerName"],
+                            streamer_json["timezone"],streamer_json["guild"],
+                            streamer_json["levelSystem"],streamer_json["levelPingRole"],
+                            streamer_json["levelChannel"],streamer_json["twitchId"],
+                            streamer_json["autoDiscordEvent"],streamer_json["autoTwitchSchedule"],
+                            streamer_json["autoImagePost"],streamer_json["scheduleMessageId"],
+                            streamer_json["autoChangeSchedule"],streamer_json["imageMessageId"]
+                            )
+
+        return streamer
+    
     def addTwitchToStreamer(self,streamer_id,twitch_id):
         url = self.urlBase + '/streamer/addTwitch';
         data = {"streamerId":streamer_id,
                 "twitchId":twitch_id,
                 "password":self.password}
         
-        r = requests.post(url,json=data)
+        r = requests.post(url,json=data).json()
 
-        return r.text
+        if(r['response'] != 'OKAY'):
+            return r['response']
 
+        return r['data']
 
+def constructStream(stream):
+    unixts = parse_timestamp(stream['streamDate'][:-5])
+    datetime_obj = datetime.datetime.timestamp(unixts)
+    print(datetime_obj)
+    streamObj = Stream(stream['streamId'],datetime_obj,stream['streamerId'],stream['streamName'],stream['eventId'],stream['twitchSegmentId'],stream['duration'],stream['categoryId'])
+    return streamObj
     
 def parse_timestamp(timestamp):
     return datetime.datetime(*[int(x) for x in re.findall(r'\d+', timestamp)],tzinfo=pytz.utc)

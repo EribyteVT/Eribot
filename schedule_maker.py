@@ -5,6 +5,7 @@ from CrudWrapper import parse_timestamp, CrudWrapper
 import random
 import pytz
 import datetime
+from Classes import Stream, Streamer
 
 
 crudService = CrudWrapper("DEV_REMOTE","","")
@@ -264,7 +265,7 @@ def resize_to_fit(image, max_width,max_height,min_flag):
 
     return image_scaled
 
-def make_schedule(streamer,streams):
+def make_schedule(streamer: Streamer,streams:list[Stream]):
     # Get streamer's base path
     base_path = "assets/"
 

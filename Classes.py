@@ -24,7 +24,7 @@ class Stream:
                            "category_id":self.category_id})
     
 class Streamer:
-    def __init__(self,streamer_id,streamer_name,timezone,guild,level_system,level_ping_role,level_channel,twitch_id):
+    def __init__(self,streamer_id,streamer_name,timezone,guild,level_system,level_ping_role,level_channel,twitch_id, auto_discord_event, auto_twitch_schedule, auto_image_post, schedule_message_id, auto_change_schedule, image_message_id):
         self.streamer_id = str(streamer_id)
         self.streamer_name = str(streamer_name)
         self.timezone = str(timezone)
@@ -34,6 +34,12 @@ class Streamer:
         self.level_channel_id = str(level_channel)
         self.level_channel = None
         self.twitch_id = twitch_id
+        self.auto_discord_event = auto_discord_event
+        self.auto_twitch_schedule = auto_twitch_schedule
+        self.auto_image_post = auto_image_post
+        self.schedule_message_id = schedule_message_id
+        self.auto_change_schedule = auto_change_schedule
+        self.image_message_id = image_message_id
 
     def setLevelChannel(self,level_channel):
         self.level_channel = level_channel
