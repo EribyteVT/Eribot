@@ -232,6 +232,8 @@ async def addStream(interaction: discord.Interaction, timestamp: str, stream_nam
 
         if(streamer.auto_discord_event == 'Y'):
             await addEvent(stream, interaction, streamer)
+        if(streamer.auto_twitch_schedule == 'Y'):
+            await addTwitchSchedule(stream,interaction,streamer)
 
 
     else:
@@ -277,8 +279,30 @@ async def addEvent(stream: Stream,interaction:discord.Interaction,streamer:Strea
 
         crudService.addServiceIdToStream(stream.stream_id,"discord",None,id)
 
-async def addTwitchSchedule():
-    pass
+async def addTwitchSchedule(stream: Stream, interaction:discord.Interaction,streamer:Streamer):
+    token_data = crudService.get_token(streamer.twitch_id)
+
+    refresh_token = encryptDecryptService.decrypt(token_data["refreshToken"],token_data["refreshSalt"])['decrypted']
+    access_token = encryptDecryptService.decrypt(token_data["accessToken"],token_data["accessSalt"])['decrypted']
+
+    target_scopes = [AuthScope.CHANNEL_MANAGE_SCHEDULE]
+
+    try:
+        await twitch.set_user_authentication(access_token,target_scopes,refresh_token)
+    except InvalidRefreshTokenException:
+        await interaction.response("ERROR, invalid twitch token, please use /authenticate-twitch to get a new one")
+        return
+    
+    if(not stream.twitch_id):
+        response = await twitch.create_channel_stream_schedule_segment(token_data['twitchId'],stream.unixts,pytz.utc._tzname,is_recurring=False,duration=180,title=stream.name)
+        id = response.segments[0].id
+        crudService.addServiceIdToStream(stream.stream_id,"twitch",id,None)
+
+@tree.command(name = "authenticate-twitch", description="Grants a twitch authentication token so bot can communicate with twitch")
+async def authenticateTwitch(interaction: discord.Interaction):
+    target_scopes = [AuthScope.CHANNEL_MANAGE_SCHEDULE]
+    auth_url = UserAuthenticator(twitch, target_scopes, force_verify=False,url="https://auth.eribyte.net/").return_auth_url()
+    await interaction.followup.send(content="Please authenticate your twitch account here first, once authenticated run this command again: " + auth_url,ephemeral=True)
 
 @tree.command(name = "sync", description="Syncs the tree (admin only)")
 async def sync(interaction: discord.Interaction, guild_id_to_sync: Optional[str]):
@@ -366,7 +390,7 @@ async def sendToTwitch(interaction: discord.Interaction):
     token_data = crudService.get_token(streamer.twitch_id)
 
     if not token_data:
-        await get_user_token(interaction,streamer.streamer_id)
+        await interaction.response("No twitch token associated with this server, please use /authenticate-twitch to get an access token")
         return
         
 
@@ -379,7 +403,7 @@ async def sendToTwitch(interaction: discord.Interaction):
     try:
         await twitch.set_user_authentication(access_token,target_scopes,refresh_token)
     except InvalidRefreshTokenException:
-        await get_user_token(interaction,streamer.streamer_id)
+        await interaction.response("ERROR, invalid twitch token, please use /authenticate-twitch to get a new one")
         return
 
 
@@ -438,12 +462,6 @@ async def connectTwitch(interaction: discord.Interaction,username:str):
     buttonMenu = Eribot_Views_Modals.GuildConnect(streamer.streamer_id,result.id,crudService)
 
     await interaction.response.send_message("# this you? ',:^)",embed=embed, ephemeral=True,view=buttonMenu)
-
-
-async def get_user_token(interaction: discord.Interaction, streamer_id: int):
-    target_scopes = [AuthScope.CHANNEL_MANAGE_SCHEDULE]
-    auth_url = UserAuthenticator(twitch, target_scopes, force_verify=False,url="https://auth.eribyte.net/").return_auth_url()
-    await interaction.followup.send(content="Please authenticate your twitch account here first, once authenticated run this command again: " + auth_url,ephemeral=True)
 
 
 @client.event

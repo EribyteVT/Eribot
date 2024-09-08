@@ -406,7 +406,7 @@ class CrudWrapper:
     def get_token(self,streamerID):
         data = {"twitchId":streamerID, "password":self.token_password}
         url = self.urlBase + '/token/getToken'
-        request = requests.post(url,json=data)
+        request = requests.post(url,json=data).json()
 
         if(request['response'] != 'OKAY'):
             return request['response']
