@@ -477,16 +477,18 @@ def make_schedule(streamer,streams):
 
         ########################################################### stream name ###################################################################################
 
+        name_font_ind = get_correct_size(streamer_base_path,f"{stream_data}",layout.name_rect.width,layout.name_rect.height)
 
-        text_name_bbox = name_font.getbbox(f"{stream_data}")
+
+        text_name_bbox = name_font_ind.getbbox(f"{stream_data}")
 
         
         name_text_height = abs(text_name_bbox[3] - text_name_bbox[1])
         name_text_width = abs(text_name_bbox[2] - text_name_bbox[0])
 
-        name_text_length = name_font.getlength(f"{stream_data}")
+        name_text_length = name_font_ind.getlength(f"{stream_data}")
 
-        I1.text(((x+layout.name_rect.top_left[0]+(layout.name_rect.width//2-name_text_width//2)), y+layout.name_rect.top_left[1]+(layout.name_rect.height/2-name_text_height/2))   ,f"{stream_data}", font=name_font, fill=font_color,anchor="lt")
+        I1.text(((x+layout.name_rect.top_left[0]+(layout.name_rect.width//2-name_text_width//2)), y+layout.name_rect.top_left[1]+(layout.name_rect.height/2-name_text_height/2))   ,f"{stream_data}", font=name_font_ind, fill=font_color,anchor="lt")
 
 
 
