@@ -24,8 +24,6 @@ class EditScheduleCommands(commands.Cog):
             await interaction.response.send_message("HEY LOSER MC DORK FACE, NICE TRY BUT UR NOT ***ALLOWED***", ephemeral=True)
             return
         
-        print(interaction.guild)
-
         streamer = await get_streamer_from_guild(interaction.guild.id, self.guild_id_lookup, self.client, self.crudService)
 
         response = self.crudService.addStream(timestamp,stream_name,streamer.streamer_id, duration)

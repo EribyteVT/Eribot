@@ -47,7 +47,6 @@ async def get_streamer_from_guild(guild,guild_id_lookup,client ,crudService, for
     if (not guild in guild_id_lookup) or force :
         
         r = crudService.getStreamer(guild)
-        print(r)
         await addStreamerToGuildList(guild,r['data'], client, guild_id_lookup)
 
     streamer = guild_id_lookup[guild]

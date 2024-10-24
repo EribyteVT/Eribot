@@ -233,8 +233,6 @@ class CrudWrapper:
         #get data
         data = requests.get(url)
 
-        print(data)
-
         #if none, add user
         if(data.text is None or data.text ==""):
             data = [self.getDataFromDiscordId(id)]
@@ -347,7 +345,6 @@ class CrudWrapper:
         r = requests.get(url)
 
         if r.status_code != 200:
-            print("Error")
             return False
 
         streamButFunky = r.json()['data']
@@ -410,7 +407,6 @@ class CrudWrapper:
         r = requests.get(url)
 
         if r.status_code != 200 or r.text == "" or r.text == None:
-            print("Error")
             return False
         
 

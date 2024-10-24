@@ -49,12 +49,10 @@ class ScheduleMenu(discord.ui.View):
         self.clear()
 
         for stream in self.streamList:
-            print(stream)
             if(str(stream.stream_id) == interaction.data["custom_id"]):
                 self.stream = stream 
                 continue
 
-        print(self.stream)
 
         
         modal = EditStreamModal(self.stream,self.crudService,self.streamer,self.interaction,self.twitch,self.encryptDecryptService)
@@ -82,8 +80,6 @@ class ScheduleMenu(discord.ui.View):
                 target_scopes = [AuthScope.CHANNEL_MANAGE_SCHEDULE]
 
                 await self.twitch.set_user_authentication(access_token,target_scopes,refresh_token)
-
-                print(self.stream.twitch_id)
 
                 await self.twitch.delete_channel_stream_schedule_segment(self.streamer.twitch_id,self.stream.twitch_id)
             except:
@@ -120,7 +116,6 @@ class EditStreamModal(discord.ui.Modal,title="Edit Stream data"):
 
     async def edit_callback(self,interaction:discord.Interaction):
         await interaction.response.defer(thinking=True,ephemeral=True)
-        print(interaction.data)
 
         components = interaction.data['components']
 
@@ -172,8 +167,6 @@ class EditStreamModal(discord.ui.Modal,title="Edit Stream data"):
 
                 await self.twitch.set_user_authentication(access_token,target_scopes,refresh_token)
 
-                print(self.stream.twitch_id)
-
                 await self.twitch.update_channel_stream_schedule_segment(self.streamer.twitch_id,self.stream.twitch_id,title = new_name,start_time=new_start_time,duration=new_duration)
             except:
                 message += 'Error with twitch event\n'
@@ -220,12 +213,10 @@ class DeleteMenu(discord.ui.View):
         self.next()
 
         for stream in self.streamList:
-            print(stream)
             if(str(stream.stream_id) == interaction.data["custom_id"]):
                 self.stream = stream 
                 continue
 
-        print(self.stream)
 
         
         await interaction.response.edit_message(content=f"Delete {self.stream.name} - <t:{str(self.stream.unixts).split('.')[0]}>?", view=self)
@@ -265,8 +256,6 @@ class DeleteMenu(discord.ui.View):
                 target_scopes = [AuthScope.CHANNEL_MANAGE_SCHEDULE]
 
                 await self.twitch.set_user_authentication(access_token,target_scopes,refresh_token)
-
-                print(self.stream.twitch_id)
 
                 await self.twitch.delete_channel_stream_schedule_segment(self.streamer.twitch_id,self.stream.twitch_id)
             except:

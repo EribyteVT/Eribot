@@ -31,7 +31,7 @@ class TwitchCommands(commands.Cog):
             return
 
 
-        streamer = await get_streamer_from_guild(interaction.guild.id,self.guild_id_lookup,self.crudService,True)
+        streamer = await get_streamer_from_guild(interaction.guild.id,self.guild_id_lookup, self.client, self.crudService,True)
 
 
         if(not streamer.twitch_id):
@@ -40,7 +40,8 @@ class TwitchCommands(commands.Cog):
 
         token_data = self.crudService.get_token(streamer.twitch_id)
 
-        if not token_data:
+
+        if not token_data['data']:
             await get_user_token(interaction,streamer.streamer_id, self.twitch)
             return
             

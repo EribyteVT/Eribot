@@ -20,7 +20,7 @@ random_comment = random.choice(comments)
 intents = discord.Intents.all()
 client = commands.Bot("Eri", intents = intents)
 
-env = "PROD"
+env = "LOCAL"
 
 crudService = CrudWrapper(env,os.environ.get("CRUD_PASSWORD"), os.environ.get("CRUD_OAUTH_PASSWORD"))
 encryptDecryptService = EncryptDecryptWrapper(env,os.environ.get("ENDPOINT_PASSWORD"))

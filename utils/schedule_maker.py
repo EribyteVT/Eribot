@@ -22,8 +22,6 @@ class Rectangle:
         self.bottom = None
 
     def __str__(self):
-        print(self.top_left, self.width, self.height)
-
         return ""
 
     def get_json(self):
@@ -368,8 +366,6 @@ def make_schedule(streamer,streams):
 
         if stream_time != "" and stream_time != None:
             stream_time_plus_zone = stream_time + "\n" + time_zone
-
-            print(stream_time_plus_zone)
 
             time_font = get_correct_size(streamer_base_path,stream_time_plus_zone,layout.time_rect.width,layout.time_rect.height)
             tfs = time_font.size
