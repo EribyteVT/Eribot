@@ -2,12 +2,11 @@ import discord
 import datetime
 import pytz
 import json
-import CrudWrapper
-from Classes import Stream,Streamer
+import wrappers.CrudWrapper as CrudWrapper
+from utils.Classes import Stream,Streamer
 from twitchAPI.twitch import Twitch
 from twitchAPI.type import AuthScope
-import EncryptDecryptWrapper
-
+import wrappers.EncryptDecryptWrapper as EncryptDecryptWrapper
 
 class StreamInfo:
     def __init__(self, unixts,name,streamer_id):
@@ -187,53 +186,81 @@ class EditStreamModal(discord.ui.Modal,title="Edit Stream data"):
 
         await interaction.followup.send(content = message, ephemeral=True)
 
-
-
-
-
-class StreamTimeModal(discord.ui.Modal,title="New Stream Time"):
-    def __init__(self,stream:Stream,crudService:CrudWrapper.CrudWrapper,streamer:Streamer, interaction:discord.Interaction, twitch:Twitch,encryptDecryptService:EncryptDecryptWrapper):
+class DeleteMenu(discord.ui.View):
+    def __init__(self,streamList: list[Stream],streamer:Streamer,crudService:CrudWrapper.CrudWrapper, interaction:discord.Interaction, twitch:Twitch,encryptDecryptService:EncryptDecryptWrapper):
         super().__init__()
+        self.streamList = streamList
         self.streamer = streamer
-        self.twitch = twitch 
+        self.crudService = crudService
+        self.interaction = interaction
+        self.twitch = twitch
         self.encryptDecryptService = encryptDecryptService
 
-        self.custom_id = "MODAL"
+        self.stream = None
 
-        stream_time_input = discord.ui.TextInput(label = "New Stream Time",custom_id="TIME_ENTRY")
-        self.add_item(stream_time_input)
+        self.streamList = streamList
 
-        self.crudService = crudService
-        self.stream = stream
+        for stream in streamList:
+            stream_time = datetime.datetime.fromtimestamp(stream.unixts).astimezone(pytz.timezone(streamer.timezone))
 
-        self.on_submit = self.name_callback
+            stream_time_str = stream_time.strftime("%d/%m/%Y, %H:%M:%S")
+
+            button = discord.ui.Button(label = stream_time_str + " " + stream.name, custom_id=str(stream.stream_id))
+            button.callback = self.handleClick
+            self.add_button(button)
     
-    async def name_callback(self,interaction:discord.Interaction):
-        await interaction.response.defer(thinking=True, ephemeral=True)
-        new_time = interaction.data["components"][0]["components"][0]["value"]
+    def add_button(self,button):
+        self.add_item(button)
 
-        new_time_datetime = datetime.datetime.fromtimestamp(float(new_time)).astimezone(pytz.timezone(self.streamer.timezone))
+    def clear(self):
+        self.clear_items()
 
-        print(new_time_datetime)
-        new_endtime = new_time_datetime + datetime.timedelta(hours=2)
+    async def handleClick(self,interaction:discord.Interaction):
+        self.clear()
+        self.next()
 
+        for stream in self.streamList:
+            print(stream)
+            if(str(stream.stream_id) == interaction.data["custom_id"]):
+                self.stream = stream 
+                continue
+
+        print(self.stream)
+
+        
+        await interaction.response.edit_message(content=f"Delete {self.stream.name} - <t:{str(self.stream.unixts).split('.')[0]}>?", view=self)
+        
+
+    def next(self):
+        # delete
+        delete_button = discord.ui.Button(label = "Delete", style=discord.ButtonStyle.danger)
+        delete_button.callback = self.deleteCallback
+        self.add_item(delete_button)
+
+        # cancel
+        cancel_button = discord.ui.Button(label = "Cancel")
+        cancel_button.callback = self.cancelCallback
+        self.add_item(cancel_button)
+
+
+    async def deleteCallback(self,interaction:discord.Interaction):
+        await interaction.response.defer(thinking=True,ephemeral=True)
         message = ""
 
         if(self.stream.event_id):
             try:
                 event = await interaction.guild.fetch_scheduled_event(self.stream.event_id)
-                await event.edit(start_time=new_time_datetime,end_time=new_endtime)
+                await event.cancel()
             except:
-                message = "Error with discord event\n"
-
+                message = "Error deleting discord event\n"
         if(self.stream.twitch_id):
             try:
                 token_data = self.crudService.get_token(self.streamer.twitch_id)
                     
 
 
-                refresh_token = self.encryptDecryptService.decrypt(token_data["refreshToken"],token_data["refreshSalt"])['decrypted']
-                access_token = self.encryptDecryptService.decrypt(token_data["accessToken"],token_data["accessSalt"])['decrypted']
+                refresh_token = self.encryptDecryptService.decrypt(token_data["data"]["refreshToken"],token_data["data"]["refreshSalt"])['decrypted']
+                access_token = self.encryptDecryptService.decrypt(token_data["data"]["accessToken"],token_data["data"]["accessSalt"])['decrypted']
 
                 target_scopes = [AuthScope.CHANNEL_MANAGE_SCHEDULE]
 
@@ -241,18 +268,21 @@ class StreamTimeModal(discord.ui.Modal,title="New Stream Time"):
 
                 print(self.stream.twitch_id)
 
-                await self.twitch.update_channel_stream_schedule_segment(self.streamer.twitch_id,self.stream.twitch_id,start_time=new_time_datetime)
+                await self.twitch.delete_channel_stream_schedule_segment(self.streamer.twitch_id,self.stream.twitch_id)
             except:
                 message += 'Error deleting twitch event\n'
+        self.crudService.deleteStream(self.stream.stream_id)
 
-        
         if(message == ""):
-            message = "Time updated!"
+            message = "Deleted Stream!"
+        
+        await interaction.followup.send(content = message)
 
-        self.crudService.editStream(self.stream.stream_id,"time",new_time,self.stream.name)
+    async def cancelCallback(self,interaction:discord.Interaction):
+        await interaction.response.defer(thinking=True,ephemeral=True)
 
-        await interaction.followup.send(content = message, ephemeral=True)
-
+        await interaction.followup.send(content = "no actions taken")
+    
 class GuildConnect(discord.ui.View):
     def __init__(self,streamer_id,twitch_id,crudService:CrudWrapper.CrudWrapper):
         super().__init__()
@@ -269,9 +299,8 @@ class GuildConnect(discord.ui.View):
         await interaction.response.edit_message(content='Connecting...',embed=None,view=None,delete_after=1)
 
         response = self.crudService.addTwitchToStreamer(self.streamer_id,self.twitch_id)
-
         
-        await interaction.followup.send(response,ephemeral=True)
+        await interaction.followup.send(response["response"],ephemeral=True)
         self.stop()
 
     # This one is similar to the confirmation button except sets the inner value to `False`
@@ -280,3 +309,36 @@ class GuildConnect(discord.ui.View):
         await interaction.response.edit_message(content='Very well, you can try again :3',embed=None,view=None)
         self.value = False
         self.stop()
+
+class ConfirmationMenu(discord.ui.View):
+    def __init__(self,discord_id,twitch_id, crud_service):
+        super().__init__()
+        self.value = None
+        self.discord_id = discord_id
+        self.twitch_id = twitch_id
+        self.crudService = crud_service
+
+    # When the button is pressed, set the inner value to `True` and
+    # stop the View from listening to more input.
+    # We also send the user an ephemeral message that we're confirming their choice.
+    @discord.ui.button(label='Yes', style=discord.ButtonStyle.green)
+    async def confirm(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.edit_message(content='Connecting...',embed=None,view=None,delete_after=1)
+        twitchUser = self.crudService.getDataFromTwitchdId(self.twitch_id)
+
+        response = self.crudService.addTwitchToDiscord(self.discord_id,self.twitch_id)
+
+        if(response.text == None or response.text == ""):
+            await interaction.followup.send("ERROR ON BACKEND, SCHRODINGERS ACCOUNT EXISTS AND DOESNT",ephemeral=True)
+            return
+        
+        await interaction.followup.send("Connected!!!!!",ephemeral=True)
+        self.stop()
+
+    # This one is similar to the confirmation button except sets the inner value to `False`
+    @discord.ui.button(label='No', style=discord.ButtonStyle.grey)
+    async def cancel(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.edit_message(content='Very well, you can try again :3',embed=None,view=None)
+        self.value = False
+        self.stop()
+

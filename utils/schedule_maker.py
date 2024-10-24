@@ -1,13 +1,13 @@
 from PIL import Image, ImageDraw, ImageFont
 import json 
 import os
-from CrudWrapper import parse_timestamp, CrudWrapper
+from wrappers.CrudWrapper import parse_timestamp, CrudWrapper
 import random
 import pytz
 import datetime
 
 
-crudService = CrudWrapper("DEV","")
+crudService = CrudWrapper("DEV_REMOTE","","")
 
 
 class Rectangle:
@@ -267,9 +267,13 @@ def resize_to_fit(image, max_width,max_height,min_flag):
 def make_schedule(streamer,streams):
     # Get streamer's base path
     base_path = "assets/"
-    streamer_guild = streamer.guild+"/"
 
-    streamer_base_path = base_path + streamer_guild
+    if(os.path.exists("assets/"+streamer.guild+"/")):
+        streamer_guild = streamer.guild+"/"
+
+        streamer_base_path = base_path + streamer_guild
+    else:
+        streamer_base_path = base_path + "default/"
 
     layout_json_exists = os.path.exists(streamer_base_path+"layout.json")
 
@@ -348,8 +352,8 @@ def make_schedule(streamer,streams):
             
             if month == stream_month and day == stream_day:
                 stream_data = stream.name
-                stream_time = stream.unixts.astimezone(pytz.timezone("America/Chicago")).time().strftime("%I:%M %p")
-                time_zone = pytz.timezone("America/Chicago").tzname(stream.unixts)
+                stream_time = stream.unixts.astimezone(pytz.timezone(streamer.timezone)).time().strftime("%I:%M %p")
+                time_zone = pytz.timezone(streamer.timezone).tzname(stream.unixts)
 
         if stream_data == "":
             stream_data = "N/A"
@@ -362,17 +366,16 @@ def make_schedule(streamer,streams):
         if(min_date_size == None or dfs < min_date_size):
             min_date_size = dfs
 
-        if stream_time == "":
-            stream_time_plus_zone = "N/A"
-            stream_time = "N/A"
-        else:
+        if stream_time != "" and stream_time != None:
             stream_time_plus_zone = stream_time + "\n" + time_zone
 
-        time_font = get_correct_size(streamer_base_path,stream_time_plus_zone,layout.time_rect.width,layout.time_rect.height)
-        tfs = time_font.size
+            print(stream_time_plus_zone)
 
-        if(min_time_size == None or tfs < min_time_size):
-            min_time_size = tfs
+            time_font = get_correct_size(streamer_base_path,stream_time_plus_zone,layout.time_rect.width,layout.time_rect.height)
+            tfs = time_font.size
+
+            if(min_time_size == None or tfs < min_time_size):
+                min_time_size = tfs
 
         day_font = get_correct_size(streamer_base_path,f"{stream_data}",layout.name_rect.width,layout.name_rect.height)
         dfss = day_font.size
@@ -396,6 +399,7 @@ def make_schedule(streamer,streams):
         # up and down will
         x = layout.schedule_rect.top_left[0]
         y = int(layout.schedule_rect.top_left[1] + jump*i)
+
         schedule_image.alpha_composite(box_image_scaled,(x,y))
 
         date = today + datetime.timedelta(i) 
@@ -412,8 +416,8 @@ def make_schedule(streamer,streams):
             
             if month == stream_month and day == stream_day:
                 stream_data = stream.name
-                stream_time = stream.unixts.astimezone(pytz.timezone("America/Chicago")).time().strftime("%I:%M %p")
-                time_zone = pytz.timezone("America/Chicago").tzname(stream.unixts)
+                stream_time = stream.unixts.astimezone(pytz.timezone(streamer.timezone)).time().strftime("%I:%M %p")
+                time_zone = pytz.timezone(streamer.timezone).tzname(stream.unixts)
 
         if stream_data == "":
             stream_data = "N/A"
@@ -431,14 +435,15 @@ def make_schedule(streamer,streams):
         date_text_height = text_date_bbox[3] - text_date_bbox[1]
         date_text_width = text_date_bbox[2] - text_date_bbox[0]
 
-        I1.text(((x+layout.date_rect.top_left[0]+(layout.date_rect.width//2-date_text_width//2)), y+layout.date_rect.top_left[1])   ,f"{month}/{day}", font=date_font, fill=font_color)
+
+        I1.text(((x+layout.date_rect.top_left[0]+(layout.date_rect.width//2-date_text_width//2)), y+layout.date_rect.top_left[1])   ,f"{month}/{day}", font=date_font, fill=font_color,anchor="lt")
 
         text_weekday_zone_bbox = date_font.getbbox(weekday)
 
         time_weekday_zone_height = text_weekday_zone_bbox[3] - text_weekday_zone_bbox[1]
         time_weekday_zone_width = text_weekday_zone_bbox[2] - text_weekday_zone_bbox[0]
 
-        I1.text(((x+layout.date_rect.top_left[0]+(layout.date_rect.width//2-time_weekday_zone_width//2)), y+layout.date_rect.top_left[1]+(layout.date_rect.height/2)),f"{weekday}", font=date_font, fill=font_color) 
+        I1.text(((x+layout.date_rect.top_left[0]+(layout.date_rect.width//2-time_weekday_zone_width//2)), y+layout.date_rect.top_left[1]+(layout.date_rect.height//2)),f"{weekday}", font=date_font, fill=font_color,anchor="lt") 
 
         ########################################################### stream_time ###################################################################################
         if stream_time == "":
@@ -450,9 +455,7 @@ def make_schedule(streamer,streams):
             time_text_height = text_time_bbox[3] - text_time_bbox[1]
             time_text_width = text_time_bbox[2] - text_time_bbox[0]
 
-
-
-            I1.text(((x+layout.time_rect.top_left[0]+(layout.time_rect.width//2-time_text_width//2)), y+layout.time_rect.top_left[1])  ,stream_time, font=no_time_size, fill=font_color)
+            I1.text(((x+layout.time_rect.top_left[0]+(layout.time_rect.width//2-time_text_width//2)), y+layout.time_rect.top_left[1]+(layout.time_rect.height//2-time_text_height//2))  ,stream_time, font=no_time_size, fill=font_color,anchor="lt")
 
         else:
             stream_time_plus_zone = stream_time + "\n" + time_zone
@@ -469,38 +472,25 @@ def make_schedule(streamer,streams):
             time_text_zone_width = text_time_zone_bbox[2] - text_time_zone_bbox[0]
 
 
-
-            I1.text(((x+layout.time_rect.top_left[0]+(layout.time_rect.width//2-time_text_width//2)), y+layout.time_rect.top_left[1])   ,stream_time, font=time_font, fill=font_color)
-            I1.text(((x+layout.time_rect.top_left[0]+(layout.time_rect.width//2-time_text_zone_width//2)), y+layout.time_rect.top_left[1]+(layout.time_rect.height//2))   ,time_zone, font=time_font, fill=font_color)
+            I1.text(((x+layout.time_rect.top_left[0]+(layout.time_rect.width//2-time_text_width//2)), y+layout.time_rect.top_left[1])   ,stream_time, font=time_font, fill=font_color,anchor="lt")
+            I1.text(((x+layout.time_rect.top_left[0]+(layout.time_rect.width//2-time_text_zone_width//2)), y+layout.time_rect.top_left[1]+(layout.time_rect.height//2))   ,time_zone, font=time_font, fill=font_color,anchor="lt")
 
         ########################################################### stream name ###################################################################################
 
+        name_font_ind = get_correct_size(streamer_base_path,f"{stream_data}",layout.name_rect.width,layout.name_rect.height)
 
-        text_name_bbox = name_font.getbbox(f"{stream_data}")
+
+        text_name_bbox = name_font_ind.getbbox(f"{stream_data}")
 
         
         name_text_height = abs(text_name_bbox[3] - text_name_bbox[1])
         name_text_width = abs(text_name_bbox[2] - text_name_bbox[0])
 
-        name_text_length = name_font.getlength(f"{stream_data}")
+        name_text_length = name_font_ind.getlength(f"{stream_data}")
 
-        # text_name_bbox_cpy = (text_name_bbox[0] + x+layout.name_rect.top_left[0]+(layout.name_rect.width/2-name_text_width/2),
-        #                       text_name_bbox[1] + y+layout.name_rect.top_left[1]+(layout.name_rect.height/2-name_text_height/2),
-        #                       text_name_bbox[2] + x+layout.name_rect.top_left[0]+(layout.name_rect.width/2-name_text_width/2),
-        #                       text_name_bbox[3] + y+layout.name_rect.top_left[1]+(layout.name_rect.height/2-name_text_height/2) )
-        # I1.rectangle(text_name_bbox_cpy)
-
-        I1.text(((x+layout.name_rect.top_left[0]+(layout.name_rect.width//2-name_text_width//2)), y+layout.name_rect.top_left[1]+(layout.name_rect.height/2-name_text_height/2))   ,f"{stream_data}", font=name_font, fill=font_color)
+        I1.text(((x+layout.name_rect.top_left[0]+(layout.name_rect.width//2-name_text_width//2)), y+layout.name_rect.top_left[1]+(layout.name_rect.height/2-name_text_height/2))   ,f"{stream_data}", font=name_font_ind, fill=font_color,anchor="lt")
 
 
 
 
     schedule_image.save(streamer_base_path+"schedule.png")
-
-# do stuff
-
-def test():
-    base_path = "assets/"
-    streamer_guild = "1166059727722131577/"
-
-test()

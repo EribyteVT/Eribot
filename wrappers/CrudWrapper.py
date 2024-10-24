@@ -5,7 +5,7 @@ import random
 import datetime
 import re 
 import pytz 
-from Classes import Stream,Streamer
+from utils.Classes import Stream,Streamer
 
 
 class CrudWrapper:
@@ -363,11 +363,7 @@ class CrudWrapper:
         return streamList
     
     def addServiceIdToStream(self,streamerId,serviceName,twitchId,discordId):
-        
-
         url = self.urlBase + '/stream/addOtherId'
-
-
 
         data = {"streamId":streamerId,
                 "serviceName":serviceName,
@@ -375,8 +371,6 @@ class CrudWrapper:
                 "discordEventId":discordId,
                 "password":self.password}
         
-        print(data)
-
         r = requests.post(url, json=data)
 
         return r
