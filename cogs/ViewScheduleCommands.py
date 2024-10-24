@@ -1,6 +1,6 @@
 from discord.ext import commands
 import discord
-from utils.utils import isAdmin,get_streamer_from_guild, add_discord_event
+from utils.utils import get_streamer_from_guild
 from wrappers.CrudWrapper import CrudWrapper
 import datetime
 import os

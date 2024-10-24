@@ -1,7 +1,7 @@
 from PIL import Image, ImageDraw, ImageFont
 import json 
 import os
-from wrappers.CrudWrapper import parse_timestamp, CrudWrapper
+from wrappers.CrudWrapper import CrudWrapper
 import random
 import pytz
 import datetime

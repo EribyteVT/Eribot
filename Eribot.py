@@ -8,7 +8,7 @@ import cogs.ExpCommands
 import cogs.MiscCommands
 import cogs.TwitchCommands
 import cogs.ViewScheduleCommands
-from wrappers.CrudWrapper import parse_timestamp, CrudWrapper
+from wrappers.CrudWrapper import CrudWrapper
 import os
 from wrappers.EncryptDecryptWrapper import EncryptDecryptWrapper
 import cogs

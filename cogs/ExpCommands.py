@@ -1,6 +1,6 @@
 from discord.ext import commands
 import discord
-from utils.utils import addStreamerToGuildList, add_xp_handler
+from utils.utils import get_streamer_from_guild, add_xp_handler
 from wrappers.CrudWrapper import CrudWrapper
 import random
 from discord import app_commands
@@ -82,15 +82,8 @@ class ExpCommands(commands.Cog):
         #bots do not get levels cuz they are stinky
         if message.author == self.client.user:
             return 
-        
-        guild = str(message.guild.id)
 
-        if not guild in self.guild_id_lookup:
-            
-            r = self.crudService.getStreamer(guild)
-            await addStreamerToGuildList(guild,r,self.client,self.guild_id_lookup)
-
-        streamer = self.guild_id_lookup[guild]
+        streamer = get_streamer_from_guild(message.guild.id, self.guild_id_lookup, self.client, self.crudService)
 
         if streamer.level_system != "Y":
             return
