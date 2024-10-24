@@ -1,3 +1,5 @@
 __pycache__
-*vscode*
-*schedule*
+.vscode/*
+
+schedule.png
+launch.json

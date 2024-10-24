@@ -5,7 +5,7 @@ import random
 import datetime
 import re 
 import pytz 
-from Classes import Stream,Streamer
+from utils.Classes import Stream, Streamer
 
 
 class CrudWrapper:
@@ -233,8 +233,6 @@ class CrudWrapper:
         #get data
         data = requests.get(url)
 
-        print(data)
-
         #if none, add user
         if(data.text is None or data.text ==""):
             data = [self.getDataFromDiscordId(id)]
@@ -328,8 +326,8 @@ class CrudWrapper:
     ################################################## STREAM TABLE STUFF ###################################
 
     
-    def addStream(self,timestamp,streamName,streamerId):
-        data = {"timestamp":timestamp, "streamName": streamName,"streamerId":streamerId,"password":self.password}
+    def addStream(self,timestamp,streamName,streamerId,duration):
+        data = {"timestamp":timestamp, "streamName": streamName,"streamerId":streamerId, "duration": duration,"password":self.password}
         url = self.urlBase + '/AddStreamTable'
         request = requests.post(url,json=data).text
 
@@ -347,10 +345,9 @@ class CrudWrapper:
         r = requests.get(url)
 
         if r.status_code != 200:
-            print("Error")
             return False
 
-        streamButFunky = r.json()
+        streamButFunky = r.json()['data']
 
         streamList = []
 
@@ -363,11 +360,7 @@ class CrudWrapper:
         return streamList
     
     def addServiceIdToStream(self,streamerId,serviceName,twitchId,discordId):
-        
-
         url = self.urlBase + '/stream/addOtherId'
-
-
 
         data = {"streamId":streamerId,
                 "serviceName":serviceName,
@@ -375,8 +368,6 @@ class CrudWrapper:
                 "discordEventId":discordId,
                 "password":self.password}
         
-        print(data)
-
         r = requests.post(url, json=data)
 
         return r
@@ -390,8 +381,9 @@ class CrudWrapper:
 
         return request
 
-    def editStream(self,stream_id,which,newTimestamp,newStreamName):
-        data = {"streamId":stream_id, "which":which, "newTimestamp":int(newTimestamp),"newName":newStreamName,"password":self.password}
+    def editStream(self,stream_id,which,newStreamName,newTimestamp,newDuration):
+        
+        data = {"streamId":stream_id, "which":which, "newTimestamp":newTimestamp,"newName":newStreamName,"newDuration":newDuration, "password":self.password}
         url = self.urlBase + '/editStream'
         request = requests.post(url,json=data).text
 
@@ -415,8 +407,9 @@ class CrudWrapper:
         r = requests.get(url)
 
         if r.status_code != 200 or r.text == "" or r.text == None:
-            print("Error")
             return False
+        
+
 
         return r.json();
 

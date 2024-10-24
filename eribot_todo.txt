@@ -1,0 +1,12 @@
+GLITCHES TO FIX:
+1. schedule image day is based off of utc, not timezone (8pm central shows as the next day) [further investigation off stream I fuckin guess]
+2. Add events sometimes sends empty message which results in an error [also look into this later]
+3. some system messages are not ephemeral [Fixed]
+
+then:
+
+add back in delete stream option
+in discord.py is there a discord.SelectOption thing? -- stux says u can have a date picker with this (useful for edit time modal)
+
+
+work on the auto update
