@@ -328,8 +328,8 @@ class CrudWrapper:
     ################################################## STREAM TABLE STUFF ###################################
 
     
-    def addStream(self,timestamp,streamName,streamerId):
-        data = {"timestamp":timestamp, "streamName": streamName,"streamerId":streamerId,"password":self.password}
+    def addStream(self,timestamp,streamName,streamerId,duration):
+        data = {"timestamp":timestamp, "streamName": streamName,"streamerId":streamerId, "duration": duration,"password":self.password}
         url = self.urlBase + '/AddStreamTable'
         request = requests.post(url,json=data).text
 
@@ -350,7 +350,7 @@ class CrudWrapper:
             print("Error")
             return False
 
-        streamButFunky = r.json()
+        streamButFunky = r.json()['data']
 
         streamList = []
 
@@ -390,8 +390,9 @@ class CrudWrapper:
 
         return request
 
-    def editStream(self,stream_id,which,newTimestamp,newStreamName):
-        data = {"streamId":stream_id, "which":which, "newTimestamp":int(newTimestamp),"newName":newStreamName,"password":self.password}
+    def editStream(self,stream_id,which,newStreamName,newTimestamp,newDuration):
+        
+        data = {"streamId":stream_id, "which":which, "newTimestamp":newTimestamp,"newName":newStreamName,"newDuration":newDuration, "password":self.password}
         url = self.urlBase + '/editStream'
         request = requests.post(url,json=data).text
 
@@ -417,6 +418,8 @@ class CrudWrapper:
         if r.status_code != 200 or r.text == "" or r.text == None:
             print("Error")
             return False
+        
+
 
         return r.json();
 
