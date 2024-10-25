@@ -83,7 +83,7 @@ class ExpCommands(commands.Cog):
         if message.author == self.client.user:
             return 
 
-        streamer = get_streamer_from_guild(message.guild.id, self.guild_id_lookup, self.client, self.crudService)
+        streamer = await get_streamer_from_guild(message.guild.id, self.guild_id_lookup, self.client, self.crudService)
 
         if streamer.level_system != "Y":
             return
@@ -97,6 +97,6 @@ class ExpCommands(commands.Cog):
         #if new account or time between messages is enuf, add xp
         if(data['lastMessageXp']==None or self.crudService.enoughTime(data['lastMessageXp'])):
             amount = random.randint(1,5)
-            await add_xp_handler(id,amount,True,message.author, streamer)
+            await add_xp_handler(id,amount,True,message.author, streamer, self.crudService)
 
     
