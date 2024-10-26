@@ -25,7 +25,7 @@ class MiscCommands(commands.Cog):
                 commands = await self.client.tree.sync()
 
             elif(guild_id_to_sync != None):
-                self.client.tree.copy_global_to(guild=guild_id_to_sync)
+                self.client.tree.copy_global_to(guild=discord.Object(id=guild_id_to_sync))
                 commands = await self.client.tree.sync(guild=discord.Object(id=guild_id_to_sync))
 
             else:
