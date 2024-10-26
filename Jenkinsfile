@@ -32,7 +32,7 @@ pipeline {
                 }
             }
         }
-        
+
         stage('Push Docker Image') {
             steps {
                 script {
@@ -81,9 +81,7 @@ pipeline {
                         sh "kubectl rollout restart deployment eribot-$environ"
                     }
                 }
-
             }
-        }
         }
     }
 }
