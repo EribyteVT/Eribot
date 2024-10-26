@@ -51,12 +51,12 @@ spec:
 
             - name: CRUD_URL
               valueFrom:
-                configKeyRef:
+                configMapKeyRef:
                   name: ${CONFIG_NAME}
                   key: CRUD_URL
             - name: ENCRYPT_URL
               valueFrom:
-                configKeyRef:
+                configMapKeyRef:
                   name: ${CONFIG_NAME}
                   key: ENCRYPT_URL
                   
