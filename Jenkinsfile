@@ -17,8 +17,12 @@ pipeline {
     stages {
         stage("Checkout from github repo"){
             steps{
-            // Replace with your github repo
-            git  branch: "${params.BRANCH}", url: 'https://github.com/EribyteVT/Eribot.git'
+
+                git  branch: "${params.BRANCH}", url: 'https://github.com/EribyteVT/Eribot.git'
+                script{
+                    envConfigJson = readJSON file: "deployEnvs.json"
+                }
+
             }
         }
         stage('Build Docker Image') {
@@ -28,6 +32,7 @@ pipeline {
                 }
             }
         }
+        
         stage('Push Docker Image') {
             steps {
                 script {
