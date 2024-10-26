@@ -59,6 +59,11 @@ spec:
                 configMapKeyRef:
                   name: ${CONFIG_NAME}
                   key: ENCRYPT_URL
+            - name: ENV
+              valueFrom:
+                configMapKeyRef:
+                  name: ${CONFIG_NAME}
+                  key: ENV
                   
   selector:
     matchLabels:
