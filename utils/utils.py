@@ -9,6 +9,7 @@ import pytz
 import os
 
 env = os.environ.get("ENV")
+print(env)
 
 async def add_discord_event(interaction, stream: Stream, streamer: Streamer, crudService: CrudWrapper):
     event = await interaction.guild.create_scheduled_event(name = stream.name[:100], 
@@ -66,7 +67,7 @@ def isAdmin(user):
     return allowed
 
 
-async def get_user_token(interaction: discord.Interaction, env, twitch):
+async def get_user_token(interaction: discord.Interaction, twitch):
     target_scopes = [AuthScope.CHANNEL_MANAGE_SCHEDULE]
     auth_url = UserAuthenticator(twitch, target_scopes, force_verify=False,url=f"https://auth-{env}.eribyte.net/").return_auth_url()
     await interaction.followup.send(content="Please authenticate your twitch account here first, once authenticated run this command again: " + auth_url,ephemeral=True)

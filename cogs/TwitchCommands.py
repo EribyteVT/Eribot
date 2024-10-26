@@ -42,7 +42,7 @@ class TwitchCommands(commands.Cog):
 
 
         if not token_data['data']:
-            await get_user_token(interaction,streamer.streamer_id, self.twitch)
+            await get_user_token(interaction, self.twitch)
             return
             
 
@@ -55,7 +55,7 @@ class TwitchCommands(commands.Cog):
         try:
             await self.twitch.set_user_authentication(access_token,target_scopes,refresh_token)
         except InvalidRefreshTokenException:
-            await get_user_token(interaction,streamer.streamer_id)
+            await get_user_token(interaction, self.twitch)
             return
 
 
