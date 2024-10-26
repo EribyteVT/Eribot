@@ -9,25 +9,9 @@ from utils.Classes import Stream, Streamer
 
 
 class CrudWrapper:
-    def __init__(self,env,password,token_password):
-        self.env = env
-        if(env == "PROD"):
-            self.urlBase = 'http://10.111.131.62:46468'
+    def __init__(self,urlBase,password,token_password):
 
-        elif(env == "LOCAL"):
-            self.urlBase = 'http://127.0.0.1:46468'
-            
-        elif(env == "DEV"):
-            self.urlBase = 'http://10.0.0.6:46468'
-
-        elif(env == "DEV_REMOTE"):
-            self.urlBase = 'https://crud.eribyte.net'
-
-        elif (env == "K8S_TEST_DEPLOY"):
-            self.urlBase = "http://10.111.131.62:46468"
-
-        else:
-            raise Exception("ERROR, ENV NOT SET")
+        self.urlBase = urlBase
         
         self.password = password
         self.token_password = token_password

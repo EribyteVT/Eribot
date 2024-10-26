@@ -1,16 +1,16 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: eribot
+  name: ${APPLICATION_NAME}
 spec:
   replicas: 1
   template:
     metadata:
       labels:
-        app: eribot
+        app: ${APPLICATION_NAME}
     spec:
       containers:
-        - name: eribot
+        - name: ${APPLICATION_NAME}
           image: eribyteofficial/eribot
           imagePullPolicy: Always
           ports:
@@ -21,39 +21,58 @@ spec:
             - name: APP_ID
               valueFrom:
                 secretKeyRef:
-                  name: eribot-secrets
+                  name: ${SECRET_NAME}
                   key: APP_ID
             - name: APP_SECRET
               valueFrom:
                 secretKeyRef:
-                  name: eribot-secrets
+                  name: ${SECRET_NAME}
                   key: APP_SECRET
             - name: CRUD_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: eribot-secrets
+                  name: ${SECRET_NAME}
                   key: CRUD_PASSWORD
-            - name: DISCORD_BETA_TOKEN
-              valueFrom:
-                secretKeyRef:
-                  name: eribot-secrets
-                  key: DISCORD_BETA_TOKEN
             - name: DISCORD_TOKEN
               valueFrom:
                 secretKeyRef:
-                  name: eribot-secrets
+                  name: ${SECRET_NAME}
                   key: DISCORD_TOKEN
             - name: ENDPOINT_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: eribot-secrets
+                  name: ${SECRET_NAME}
                   key: ENDPOINT_PASSWORD
             - name: CRUD_OAUTH_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: eribot-secrets
+                  name: ${SECRET_NAME}
                   key: CRUD_OAUTH_PASSWORD
+
+            - name: CRUD_URL
+              valueFrom:
+                configKeyRef:
+                  name: ${CONFIG_NAME}
+                  key: CRUD_URL
+            - name: ENCRYPT_URL
+              valueFrom:
+                configKeyRef:
+                  name: ${CONFIG_NAME}
+                  key: ENCRYPT_URL
                   
   selector:
     matchLabels:
-      app: eribot
+      app: ${APPLICATION_NAME}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ${APPLICATION_NAME}
+spec:
+  type: NodePort
+  selector:
+    app: ${APPLICATION_NAME}
+  ports:
+  - protocol: TCP
+    port: 3000
+    targetPort: 3000

@@ -1,0 +1,17 @@
+{
+    "envs": [
+      "stage",
+      "prod"
+    ],
+    "configs": [
+      {
+        "env": "stage",
+        "templateParams": {
+          "APPLICATION_NAME": "eribot-stage",
+          "SECRET_NAME": "eribot-secrets-stage",
+          "CONFIG_NAME": "eribot-config-stage"
+        }
+      }
+  
+    ]
+  }
