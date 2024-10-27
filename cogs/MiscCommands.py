@@ -40,3 +40,8 @@ class MiscCommands(commands.Cog):
             await interaction.followup.send(content = "Synced the following commands:\n"+message, ephemeral=True)
         else:
             await interaction.followup.send(content = "Insufficient permissions", ephemeral=True)
+
+
+    @app_commands.command(name = "hug", description="hugs the eribot")
+    async def hug(self, interaction: discord.Interaction):
+        await interaction.response.send_message(f"Thank you for the hug {interaction.user.name}!!!")
