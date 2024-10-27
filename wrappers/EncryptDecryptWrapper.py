@@ -1,22 +1,8 @@
 import requests
 
 class EncryptDecryptWrapper:
-    def __init__(self,env,password):
-        self.env = env
-        if(env == "PROD"):
-            self.urlBase = 'http://10.96.46.46:5000'
-
-        elif(env == "LOCAL"):
-            self.urlBase = 'http://127.0.0.1:5000'
-            
-        elif(env == "DEV"):
-            self.urlBase = 'http://10.0.0.6:5000'
-
-        elif (env == "K8S_TEST_DEPLOY"):
-            self.urlBase = "http://10.96.46.46:5000"
-
-        else:
-            raise Exception("ERROR, ENV NOT SET")
+    def __init__(self,urlBase,password):
+        self.urlBase = urlBase
         
         self.encrypt_password = password
 

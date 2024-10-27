@@ -20,30 +20,13 @@ random_comment = random.choice(comments)
 intents = discord.Intents.all()
 client = commands.Bot("Eri", intents = intents)
 
-env = "PROD"
-
-crudService = CrudWrapper(env,os.environ.get("CRUD_PASSWORD"), os.environ.get("CRUD_OAUTH_PASSWORD"))
-encryptDecryptService = EncryptDecryptWrapper(env,os.environ.get("ENDPOINT_PASSWORD"))
+crudService = CrudWrapper(os.environ.get("CRUD_URL"),os.environ.get("CRUD_PASSWORD"), os.environ.get("CRUD_OAUTH_PASSWORD"))
+encryptDecryptService = EncryptDecryptWrapper(os.environ.get("ENCRYPT_URL"),os.environ.get("ENDPOINT_PASSWORD"))
 
 # guild id to streamer obj
 guild_id_lookup = {}
 
-if(env == "PROD"):
-    #THE MAIN ERIBYTE SERVER
-    DTOKEN = os.environ.get("DISCORD_TOKEN")
-
-elif(env == "LOCAL"):
-    #ERIBYTE TEST SITE ALPHA
-    DTOKEN = os.environ.get("DISCORD_BETA_TOKEN")
-
-elif(env == "DEV"):
-    DTOKEN = os.environ.get("DISCORD_BETA_TOKEN")
-
-elif (env == "K8S_TEST_DEPLOY"):
-    DTOKEN = os.environ.get("DISCORD_BETA_TOKEN")
-
-else:
-    raise Exception("ERROR, ENV NOT SET")
+DTOKEN = os.environ.get("DISCORD_TOKEN")
 
 @client.event
 async def on_ready():
