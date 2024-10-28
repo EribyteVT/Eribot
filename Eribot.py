@@ -10,6 +10,7 @@ import cogs.TwitchCommands
 import cogs.ViewScheduleCommands
 from wrappers.CrudWrapper import CrudWrapper
 import os
+import sys
 from wrappers.EncryptDecryptWrapper import EncryptDecryptWrapper
 import cogs
 
@@ -24,6 +25,10 @@ encryptDecryptService = EncryptDecryptWrapper(os.environ.get("ENCRYPT_URL"),os.e
 guild_id_lookup = {}
 
 DTOKEN = os.environ.get("DISCORD_TOKEN")
+
+if DTOKEN == None:
+    print("no token was set.")
+    sys.exit(1)
 
 @client.event
 async def on_ready():
