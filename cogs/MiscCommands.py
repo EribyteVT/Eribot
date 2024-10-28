@@ -17,6 +17,17 @@ class MiscCommands(commands.Cog):
         random_comment = random.choice(comments) 
         await interaction.response.send_message(random_comment)
 
+    @commands.command(name="sync", help="Syncs the tree (admin only)")
+    async def sync_prefix(self, ctx: commands.Context, guild_id_to_sync: Optional[str] = None):
+        self.client.tree.copy_global_to(guild=ctx.guild)
+        commands = await self.client.tree.sync(guild=ctx.guild)
+
+        for command in commands:
+            message += command.name +"\n"
+            
+        await ctx.reply(content = "Synced the following commands:\n"+message)
+
+
     @app_commands.command(name = "sync", description="Syncs the tree (admin only)")
     async def sync(self, interaction: discord.Interaction, guild_id_to_sync: Optional[str]):
         await interaction.response.defer(thinking=True)
