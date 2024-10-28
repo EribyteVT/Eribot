@@ -13,9 +13,6 @@ import os
 from wrappers.EncryptDecryptWrapper import EncryptDecryptWrapper
 import cogs
 
-        
-comments = ["You go, girl!", "Are you fucking kidding me? HELL yeah!", "Great job!", "I love it!", "Amazing work!", "Well done!", "Impressive!", "Fantastic!", "You nailed it!", "Awesome!", "Brilliant!", "Keep it up!" ] 
-random_comment = random.choice(comments) 
 
 intents = discord.Intents.all()
 client = commands.Bot("Eri", intents = intents)
