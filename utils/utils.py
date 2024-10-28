@@ -9,7 +9,6 @@ import pytz
 import os
 
 env = os.environ.get("ENV")
-print(env)
 
 async def add_discord_event(interaction, stream: Stream, streamer: Streamer, crudService: CrudWrapper):
     event = await interaction.guild.create_scheduled_event(name = stream.name[:100], 
