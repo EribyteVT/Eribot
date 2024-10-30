@@ -345,6 +345,7 @@ def make_schedule(streamer,streams):
         time_zone = ""
 
         for stream in streams:
+            stream = stream.unixts.astimezone(pytz.timezone(streamer.timezone))
             stream_month = stream.unixts.month
             stream_day = stream.unixts.day
             

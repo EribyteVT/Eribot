@@ -30,7 +30,7 @@ class MiscCommands(commands.Cog):
                 embed.add_field(name="tags:", value=" ".join(post["tags"].split(" ")[:10]))
                 embed.add_field(name="source", value=post["source"])
 
-                embed.set_image(url=f"https://proxy.mono.exhq.dev/_/plain/{post["file_url"]}")
+                embed.set_image(url=f"https://proxy.mono.exhq.dev/_/plain/{post['file_url']}")
 
                 await interaction.followup.send(embed=embed)
             else:
