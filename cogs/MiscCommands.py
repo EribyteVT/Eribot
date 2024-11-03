@@ -30,7 +30,7 @@ class MiscCommands(commands.Cog):
                 embed.add_field(name="tags:", value=" ".join(post["tags"].split(" ")[:10]))
                 embed.add_field(name="source", value=post["source"])
 
-                embed.set_image(url=f"https://proxy.mono.exhq.dev/_/plain/{post["file_url"]}")
+                embed.set_image(url=f"https://proxy.mono.exhq.dev/_/plain/{post['file_url']}")
 
                 await interaction.followup.send(embed=embed)
             else:
@@ -75,3 +75,8 @@ class MiscCommands(commands.Cog):
             await interaction.followup.send(content = "Synced the following commands:\n"+message, ephemeral=True)
         else:
             await interaction.followup.send(content = "Insufficient permissions", ephemeral=True)
+
+
+    @app_commands.command(name = "hug", description="hugs the eribot")
+    async def hug(self, interaction: discord.Interaction):
+        await interaction.response.send_message(f"Thank you for the hug {interaction.user.name}!!!")

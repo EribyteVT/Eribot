@@ -336,6 +336,8 @@ def make_schedule(streamer,streams):
     min_time_size = None 
 
     for i in range(7):
+        print(i)
+
         date = today + datetime.timedelta(i) 
         month = date.month 
         day = date.day
@@ -345,13 +347,14 @@ def make_schedule(streamer,streams):
         time_zone = ""
 
         for stream in streams:
+            stream.unixts = stream.unixts.astimezone(pytz.timezone(streamer.timezone))
             stream_month = stream.unixts.month
             stream_day = stream.unixts.day
             
             if month == stream_month and day == stream_day:
                 stream_data = stream.name
-                stream_time = stream.unixts.astimezone(pytz.timezone(streamer.timezone)).time().strftime("%I:%M %p")
-                time_zone = pytz.timezone(streamer.timezone).tzname(stream.unixts)
+                stream_time = stream.unixts.time().strftime("%I:%M %p")
+                time_zone = stream.unixts.astimezone(pytz.timezone(streamer.timezone)).strftime('%Z')
 
         if stream_data == "":
             stream_data = "N/A"
@@ -413,7 +416,7 @@ def make_schedule(streamer,streams):
             if month == stream_month and day == stream_day:
                 stream_data = stream.name
                 stream_time = stream.unixts.astimezone(pytz.timezone(streamer.timezone)).time().strftime("%I:%M %p")
-                time_zone = pytz.timezone(streamer.timezone).tzname(stream.unixts)
+                time_zone = stream.unixts.astimezone(pytz.timezone(streamer.timezone)).strftime('%Z')
 
         if stream_data == "":
             stream_data = "N/A"
