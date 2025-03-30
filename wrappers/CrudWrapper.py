@@ -208,7 +208,7 @@ class CrudWrapper:
             data = data.json()
 
 
-        #return the data
+        #return the datca
         return data
     
     def getAssociatedFromDiscord(self,id):

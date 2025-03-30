@@ -80,8 +80,8 @@ class ExpCommands(commands.Cog):
     @commands.Cog.listener("on_message")
     async def on_message(self, message:discord.Message):
         #bots do not get levels cuz they are stinky
-        if message.author == self.client.user:
-            return 
+        # if message.author == self.client.user:
+        #     return 
 
         streamer = await get_streamer_from_guild(message.guild.id, self.guild_id_lookup, self.client, self.crudService)
 
