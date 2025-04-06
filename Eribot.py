@@ -36,6 +36,8 @@ if DTOKEN == None:
 
 @client.event
 async def on_ready():
+    activity = discord.Activity(name='https://eri.bot', type=discord.ActivityType.custom)
+    
     if NOTWITCH == None:
         twitch = await Twitch(os.environ.get("APP_ID"), os.environ.get("APP_SECRET"))
         await client.add_cog(cogs.EditScheduleCommands.EditScheduleCommands(client,crudService,guild_id_lookup,twitch, encryptDecryptService))
@@ -46,7 +48,7 @@ async def on_ready():
     await client.add_cog(cogs.MiscCommands.MiscCommands(client))
     await client.add_cog(cogs.ViewScheduleCommands.ViewScheduleCommands(client,crudService,guild_id_lookup))
 
-    await client.change_presence(status=discord.Status.online)
+    await client.change_presence(status=discord.Status.online, activity=activity)
     
 
     print("RUNNING")
