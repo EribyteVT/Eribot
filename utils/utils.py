@@ -27,6 +27,7 @@ async def add_twitch_event(stream: Stream, crudService: CrudWrapper, twitch: Twi
     response = await twitch.create_channel_stream_schedule_segment(token_data['data']['twitchId'],stream.unixts,pytz.utc._tzname,is_recurring=False,
                                                                                 duration=stream.duration,title=stream.name)
     id = response.segments[0].id
+    
     crudService.addServiceIdToStream(stream.stream_id,"twitch",id,None)
 
     return id
