@@ -74,7 +74,7 @@ pipeline {
 
                 withCredentials([string(credentialsId: 'CA_CERTIFICATE', variable: 'cert'),
                                  string(credentialsId: 'Kuubernetes_creds_id', variable: 'cred'),
-                                 string(credentialsId: 'kubernetes_server_url', variable: 'url')]) {
+                                 string(credentialsId: 'new_serv_url', variable: 'url')]) {
 
                     kubeconfig(caCertificate: "${cert}", credentialsId: "${cred}", serverUrl: "${url}"){
                         sh 'kubectl apply -f k8s_generated.yaml'
