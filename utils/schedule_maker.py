@@ -379,6 +379,9 @@ def make_schedule(streamer,streams):
         day_font = get_correct_size(streamer_base_path,f"{stream_data}",layout.name_rect.width,layout.name_rect.height)
         dfss = day_font.size
 
+        if(min_time_size == None):
+                min_time_size = 3
+
         if(min_name_size == None or dfss < min_name_size):
             min_name_size = dfss
 
