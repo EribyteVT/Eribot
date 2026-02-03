@@ -16,7 +16,7 @@ import cogs
 
 
 intents = discord.Intents.all()
-client = commands.Bot("Eri", intents = intents)
+client = commands.Bot("Eribot", intents = intents)
 
 crudService = CrudWrapper(os.environ.get("CRUD_URL"),os.environ.get("CRUD_PASSWORD"), os.environ.get("CRUD_OAUTH_PASSWORD"))
 encryptDecryptService = EncryptDecryptWrapper(os.environ.get("ENCRYPT_URL"),os.environ.get("ENDPOINT_PASSWORD"))

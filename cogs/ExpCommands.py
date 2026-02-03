@@ -1,6 +1,6 @@
-from discord.ext import commands
+from discord.ext import commands, tasks
 import discord
-from utils.utils import get_streamer_from_guild, add_xp_handler
+from utils.utils import get_streamer_from_guild, add_xp_handler, empty_streamer_cache
 from wrappers.CrudWrapper import CrudWrapper
 import random
 from discord import app_commands
@@ -15,6 +15,8 @@ class ExpCommands(commands.Cog):
         self.crudService = crudService
         self.twitch = twitch
         self.guild_id_lookup = guild_id_lookup
+
+        self.clear_streamer_cache.start()
         
 
     @app_commands.command(name = "connect-twitch",description="connect your twitch and discord account for more XP!")
@@ -99,4 +101,8 @@ class ExpCommands(commands.Cog):
             amount = random.randint(1,5)
             await add_xp_handler(id,amount,True,message.author, streamer, self.crudService)
 
+    @tasks.loop(hours=8)
+    async def clear_streamer_cache(self):
+        print("emptied streamer cache")
+        empty_streamer_cache(self.guild_id_lookup)
     

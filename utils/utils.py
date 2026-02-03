@@ -72,6 +72,10 @@ async def get_streamer_from_guild(guild,guild_id_lookup,client ,crudService, for
 
     return streamer
 
+def empty_streamer_cache(guild_id_lookup: dict):
+    guild_id_lookup.clear()
+    
+
 def isAdmin(user):
     roles = user.roles 
     allowed = False
