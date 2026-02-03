@@ -6,6 +6,7 @@ import datetime
 import re 
 import pytz 
 from utils.Classes import Stream, Streamer
+from functools import cache
 
 
 class CrudWrapper:
@@ -287,6 +288,7 @@ class CrudWrapper:
 
         return request
 
+    @cache
     def enoughTime(self,lastTime):
         #get current time
         currentTime = str(time.time())[:-4]
