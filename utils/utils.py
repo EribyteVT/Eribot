@@ -51,22 +51,22 @@ async def get_streamer_from_guild(guild,guild_id_lookup,client ,crudService, for
 
     if (not guild in guild_id_lookup) or force :
         
-        try:
+        # try:
             r = crudService.getStreamer(guild)
             await addStreamerToGuildList(guild,r['data'], client, guild_id_lookup)
-        except:
-            print("Streamer does not exist")
+        # except:
+        #     print("Streamer does not exist")
             
-            blank_streamer = {"streamerId": -1,
-                              "streamerName": "null",
-                              "timezone": "CST",
-                              "guild": guild,
-                              "levelSystem": "N",
-                              "levelSystem": None,
-                              "levelPingRole": None,
-                              "levelChannel": None,
-                              "twitchId": None}
-            await addStreamerToGuildList(guild, blank_streamer, client, guild_id_lookup)
+        #     blank_streamer = {"streamerId": -1,
+        #                       "streamerName": "null",
+        #                       "timezone": "CST",
+        #                       "guild": guild,
+        #                       "levelSystem": "N",
+        #                       "levelSystem": None,
+        #                       "levelPingRole": None,
+        #                       "levelChannel": None,
+        #                       "twitchId": None}
+        #     await addStreamerToGuildList(guild, blank_streamer, client, guild_id_lookup)
 
     streamer = guild_id_lookup[guild]
 
